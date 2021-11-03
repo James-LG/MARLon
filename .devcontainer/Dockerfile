@@ -1,16 +1,18 @@
 FROM ghcr.io/james-lg/cyberbattlesim:1 as cb
 
-# Install cyberbattlesim
-RUN cp -r /root /cyberbattlesim
-RUN chmod 777 /cyberbattlesim
-RUN pip install -e /cyberbattlesim
-
-# Development dependencies
 ARG USERNAME=vscode
 RUN useradd -ms /bin/bash ${USERNAME}
 
-RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends python3-pyqt5 x11-apps zsh
+# Install cyberbattlesim
+# RUN cp -r /root /cyberbattlesim
+# RUN chmod 777 /cyberbattlesim
+# RUN pip install -e /cyberbattlesim
+RUN chmod 777 /root &&\
+    mkdir -p /home/vscode/.local/lib/python3.8/site-packages/ &&\
+    cp -r /root /home/vscode/.local/lib/python3.8/site-packages/cyberbattle &&\
+    chown -R vscode /home/vscode/
+
+# Development dependencies
 RUN pip install pylint
 COPY .devcontainer/bashsetup.sh /tmp/library-scripts/
 RUN bash /tmp/library-scripts/bashsetup.sh "${USERNAME}"
@@ -22,3 +24,5 @@ RUN pip --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requi
 
 USER ${USERNAME}
 WORKDIR /home/${USERNAME}
+ENV FLASK_APP web
+ENV FLASK_ENV development

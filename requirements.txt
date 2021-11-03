@@ -26,6 +26,7 @@ entrypoints==0.3
 filelock==3.2.1
 flake8==3.9.2
 flake8-polyfill==1.0.2
+Flask==2.0.2
 future==0.18.2
 gym==0.17.3
 identify==2.3.0
@@ -35,6 +36,7 @@ ipython==7.28.0
 ipython-genutils==0.2.0
 ipywidgets==7.6.5
 isort==5.10.0
+itsdangerous==2.0.1
 jedi==0.18.0
 Jinja2==3.0.1
 jsonschema==4.0.1
@@ -95,9 +97,6 @@ PyGObject==3.26.1
 pylint==2.11.1
 PyOpenGL==3.1.0
 pyparsing==2.4.7
-PyQt5==5.15.6
-PyQt5-Qt5==5.15.2
-PyQt5-sip==12.9.0
 pyrsistent==0.18.0
 pytest==5.4.3
 python-apt==1.6.5+ubuntu0.6
@@ -131,5 +130,6 @@ urllib3==1.26.7
 virtualenv==20.8.1
 wcwidth==0.2.5
 webencodings==0.5.1
+Werkzeug==2.0.2
 widgetsnbextension==3.5.1
 wrapt==1.13.3
