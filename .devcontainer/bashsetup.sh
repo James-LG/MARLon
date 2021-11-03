@@ -1,3 +1,20 @@
+USERNAME=${1:-"automatic"}
+MARKER_FILE="/usr/local/etc/vscode-dev-containers/common"
+
+# Load markers to see which steps have already run
+if [ -f "${MARKER_FILE}" ]; then
+    echo "Marker file found:"
+    cat "${MARKER_FILE}"
+    source "${MARKER_FILE}"
+fi
+
+# ** Shell customization section **
+if [ "${USERNAME}" = "root" ]; then 
+    user_rc_path="/root"
+else
+    user_rc_path="/home/${USERNAME}"
+fi
+
 # .bashrc/.zshrc snippet
 rc_snippet="$(cat << 'EOF'
 if [ -z "${USER}" ]; then export USER=$(whoami); fi
@@ -51,3 +68,23 @@ __bash_prompt() {
 __bash_prompt
 EOF
 )"
+
+# Add RC snippet and custom bash prompt
+if [ "${RC_SNIPPET_ALREADY_ADDED}" != "true" ]; then
+    echo "${rc_snippet}" >> /etc/bash.bashrc
+    echo "${codespaces_bash}" >> "${user_rc_path}/.bashrc"
+    echo 'export PROMPT_DIRTRIM=4' >> "${user_rc_path}/.bashrc"
+    if [ "${USERNAME}" != "root" ]; then
+        echo "${codespaces_bash}" >> "/root/.bashrc"
+        echo 'export PROMPT_DIRTRIM=4' >> "/root/.bashrc"
+    fi
+    chown ${USERNAME}:${USERNAME} "${user_rc_path}/.bashrc"
+    RC_SNIPPET_ALREADY_ADDED="true"
+fi
+
+
+# Write marker file
+mkdir -p "$(dirname "${MARKER_FILE}")"
+echo -e "RC_SNIPPET_ALREADY_ADDED=${RC_SNIPPET_ALREADY_ADDED}" > "${MARKER_FILE}"
+
+echo "Done!"
