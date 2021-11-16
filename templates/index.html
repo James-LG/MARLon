@@ -13,13 +13,14 @@
     async function renderGraph (index) {
         let response = await fetch('sim/' + index)
         let graphs = await response.json()
-        Plotly.newPlot('chart',graphs,{});
+        Plotly.newPlot('chart',graphs[0],{});
+        spnProgress.textContent = (graphs[1]) + '/' + (max_sim);
     }
 
     async function updateGraph () {
         await renderGraph(index);
 
-        if (index == max_sim) {
+        if (index == list_length-1) {
             btnNext.disabled = true;
             btnPrevious.disabled = false;
         } else if (index == 0) {
@@ -30,10 +31,10 @@
             btnPrevious.disabled = false;
         }
 
-        spnProgress.textContent = (index + 1) + '/' + (max_sim + 1);
     }
 
     var max_sim = {{max_sim | safe}}
+    var list_length = {{list_length | safe}}
     var index = 0;
 
     var spnProgress = document.getElementById("spnProgress");
