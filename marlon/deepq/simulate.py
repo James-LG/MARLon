@@ -34,22 +34,20 @@ def run_simulation():
 
     observation = wrapped_env.reset()
 
-    dql_run = torch.load('tabularq.pkl')
+    dql_run = torch.load('deepq.pkl')
     learner = dql_run['learner']
 
-    iteration_number = 200
-    iteration_count = 0
+    iteration_number = 1000
     simulation = [generate_graph_json(gym_env, 0)]
-    for _ in range(iteration_number - 1):
-        iteration_count += 1
+
+    for iteration_count in range(iteration_number):
         _, gym_action, _ = learner.exploit(wrapped_env, observation)
         if not gym_action:
             _, gym_action, _ = learner.explore(wrapped_env)
-
         observation, reward, done, _ = wrapped_env.step(gym_action)
-        if reward != 0:
-            simulation.append(generate_graph_json(gym_env, iteration_count))
-
+        # If there is a jump in the reward for this step, record it for UI display.
+        if reward != 0 or iteration_count == iteration_number-1:
+            simulation.append(generate_graph_json(gym_env, iteration_count+1))
         if done:
             break
     return simulation, iteration_number
