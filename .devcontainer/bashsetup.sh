@@ -1,11 +1,108 @@
 USERNAME=${1:-"automatic"}
+USER_UID=${2:-"automatic"}
+USER_GID=${3:-"automatic"}
+UPGRADE_PACKAGES=${4:-"true"}
 MARKER_FILE="/usr/local/etc/vscode-dev-containers/common"
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo -e 'Script must be run as root. Use sudo, su, or add "USER root" to your Dockerfile before running this script.'
+    exit 1
+fi
+
+# Ensure that login shells get the correct path if the user updated the PATH using ENV.
+rm -f /etc/profile.d/00-restore-env.sh
+echo "export PATH=${PATH//$(sh -lc 'echo $PATH')/\$PATH}" > /etc/profile.d/00-restore-env.sh
+chmod +x /etc/profile.d/00-restore-env.sh
 
 # Load markers to see which steps have already run
 if [ -f "${MARKER_FILE}" ]; then
     echo "Marker file found:"
     cat "${MARKER_FILE}"
     source "${MARKER_FILE}"
+fi
+
+# Ensure apt is in non-interactive to avoid prompts
+export DEBIAN_FRONTEND=noninteractive
+
+# Function to call apt-get if needed
+apt_get_update_if_needed()
+{
+    if [ ! -d "/var/lib/apt/lists" ] || [ "$(ls /var/lib/apt/lists/ | wc -l)" = "0" ]; then
+        echo "Running apt-get update..."
+        apt-get update
+    else
+        echo "Skipping apt-get update."
+    fi
+}
+
+# Add new git package source
+sed -i 's/#!\/usr\/bin\/python3/#!\/usr\/bin\/python3.6/' /usr/bin/add-apt-repository
+add-apt-repository ppa:git-core/ppa
+
+# Run install apt-utils to avoid debconf warning then verify presence of other common developer tools and dependencies
+if [ "${PACKAGES_ALREADY_INSTALLED}" != "true" ]; then
+    package_list="apt-utils \
+        curl \
+        wget \
+        unzip \
+        zip \
+        vim-tiny \
+        less \
+        git \
+        sudo"
+
+    echo "Packages to verify are installed: ${package_list}"
+    apt-get -y install --no-install-recommends ${package_list} 2> >( grep -v 'debconf: delaying package configuration, since apt-utils is not installed' >&2 )
+
+    PACKAGES_ALREADY_INSTALLED="true"
+fi
+
+# Get to latest versions of all packages
+if [ "${UPGRADE_PACKAGES}" = "true" ]; then
+    apt_get_update_if_needed
+    apt-get -y upgrade --no-install-recommends
+    apt-get autoremove -y
+fi
+
+# Ensure at least the en_US.UTF-8 UTF-8 locale is available.
+# Common need for both applications and things like the agnoster ZSH theme.
+if [ "${LOCALE_ALREADY_SET}" != "true" ] && ! grep -o -E '^\s*en_US.UTF-8\s+UTF-8' /etc/locale.gen > /dev/null; then
+    echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen 
+    locale-gen
+    LOCALE_ALREADY_SET="true"
+fi
+
+# Create or update a non-root user to match UID/GID.
+if id -u ${USERNAME} > /dev/null 2>&1; then
+    # User exists, update if needed
+    if [ "${USER_GID}" != "automatic" ] && [ "$USER_GID" != "$(id -G $USERNAME)" ]; then 
+        groupmod --gid $USER_GID $USERNAME 
+        usermod --gid $USER_GID $USERNAME
+    fi
+    if [ "${USER_UID}" != "automatic" ] && [ "$USER_UID" != "$(id -u $USERNAME)" ]; then 
+        usermod --uid $USER_UID $USERNAME
+    fi
+else
+    # Create user
+    if [ "${USER_GID}" = "automatic" ]; then
+        groupadd $USERNAME
+    else
+        groupadd --gid $USER_GID $USERNAME
+    fi
+    if [ "${USER_UID}" = "automatic" ]; then 
+        useradd -s /bin/bash --gid $USERNAME -m $USERNAME
+    else
+        useradd -s /bin/bash --uid $USER_UID --gid $USERNAME -m $USERNAME
+    fi
+
+    passwd $USERNAME
+fi
+
+# Add add sudo support for non-root user
+if [ "${USERNAME}" != "root" ] && [ "${EXISTING_NON_ROOT_USER}" != "${USERNAME}" ]; then
+    echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME
+    chmod 0440 /etc/sudoers.d/$USERNAME
+    EXISTING_NON_ROOT_USER="${USERNAME}"
 fi
 
 # ** Shell customization section **
@@ -85,6 +182,8 @@ fi
 
 # Write marker file
 mkdir -p "$(dirname "${MARKER_FILE}")"
-echo -e "RC_SNIPPET_ALREADY_ADDED=${RC_SNIPPET_ALREADY_ADDED}" > "${MARKER_FILE}"
+echo -e "\
+    EXISTING_NON_ROOT_USER=${EXISTING_NON_ROOT_USER}\n\
+    RC_SNIPPET_ALREADY_ADDED=${RC_SNIPPET_ALREADY_ADDED}" > "${MARKER_FILE}"
 
 echo "Done!"

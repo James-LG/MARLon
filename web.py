@@ -1,6 +1,6 @@
 from flask import Flask, render_template
 
-from marlon.deepq.simulate import run_simulation
+from marlon.simulate import run_simulation
 
 app = Flask(__name__)
 ITERATION_COUNT = 1500
