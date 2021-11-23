@@ -7,13 +7,14 @@ import plotly
 import torch
 
 
-def generate_graph_json(cyberbattle_env):
+def generate_graph_json(cyberbattle_env, iteration):
     fig = cyberbattle_env.render_as_fig()
 
-    graph_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+    graph_json = json.dumps((fig, iteration), cls=plotly.utils.PlotlyJSONEncoder)
+
     return graph_json
 
-def run_simulation():
+def run_simulation(iteration_count):
     # Load the Gym environment
     gymid = "CyberBattleToyCtf-v0"
     gym_env = gym.make(gymid)
@@ -36,19 +37,16 @@ def run_simulation():
     dql_run = torch.load('deepq.pkl')
     learner = dql_run['learner']
 
-    iteration_count = 1000
+    simulation = [generate_graph_json(gym_env, 0)]
 
-    simulation = [generate_graph_json(gym_env)]
-    for _ in range(iteration_count - 1):
+    for iteration in range(iteration_count):
         _, gym_action, _ = learner.exploit(wrapped_env, observation)
         if not gym_action:
             _, gym_action, _ = learner.explore(wrapped_env)
-
-        observation, _, done, _ = wrapped_env.step(gym_action)
-
-        simulation.append(generate_graph_json(gym_env))
-
+        observation, reward, done, _ = wrapped_env.step(gym_action)
+        # If there is a jump in the reward for this step, record it for UI display.
+        if reward != 0 or iteration == iteration_count-1:
+            simulation.append(generate_graph_json(gym_env, iteration+1))
         if done:
             break
-
     return simulation
