@@ -5,7 +5,7 @@ import gym
 
 import plotly
 import torch
-
+import numpy as np
 
 def generate_graph_json(cyberbattle_env, iteration):
     fig = cyberbattle_env.render_as_fig()
@@ -40,13 +40,18 @@ def run_simulation(iteration_count):
     simulation = [generate_graph_json(gym_env, 0)]
 
     for iteration in range(iteration_count):
-        _, gym_action, _ = learner.exploit(wrapped_env, observation)
+        _, gym_action, action_metadata = learner.exploit(wrapped_env, observation)
         if not gym_action:
-            _, gym_action, _ = learner.explore(wrapped_env)
-        observation, reward, done, _ = wrapped_env.step(gym_action)
+            _, gym_action, action_metadata = learner.explore(wrapped_env)
+
+        observation, reward, done, info = wrapped_env.step(gym_action)
+        learner.on_step(wrapped_env, observation, reward, done, info, action_metadata)
+        assert np.shape(reward) == ()
+
         # If there is a jump in the reward for this step, record it for UI display.
         if reward != 0 or iteration == iteration_count-1:
             simulation.append(generate_graph_json(gym_env, iteration+1))
         if done:
             break
+
     return simulation
