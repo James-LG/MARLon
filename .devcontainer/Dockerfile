@@ -1,12 +1,18 @@
 FROM ghcr.io/james-lg/cyberbattlesim:1 as cb
 
+# Copy library scripts to execute
+COPY .devcontainer/bashsetup.sh /tmp/library-scripts/
+
+# Install needed packages and setup non-root user. Use a separate RUN statement to add your own dependencies.
 ARG USERNAME=vscode
-RUN useradd -ms /bin/bash ${USERNAME}
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    # Install common packages, non-root user
+    && bash /tmp/library-scripts/bashsetup.sh "${USERNAME}" "${USER_UID}" "${USER_GID}" "true" \
+    && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Install cyberbattlesim
-# RUN cp -r /root /cyberbattlesim
-# RUN chmod 777 /cyberbattlesim
-# RUN pip install -e /cyberbattlesim
 RUN chmod 777 /root &&\
     mkdir -p /home/vscode/.local/lib/python3.8/site-packages/ &&\
     cp -r /root /home/vscode/.local/lib/python3.8/site-packages/cyberbattle &&\
@@ -14,15 +20,18 @@ RUN chmod 777 /root &&\
 
 # Development dependencies
 RUN pip install pylint
-COPY .devcontainer/bashsetup.sh /tmp/library-scripts/
-RUN bash /tmp/library-scripts/bashsetup.sh "${USERNAME}"
+
+# Remove library scripts for final image
+RUN rm -rf /tmp/library-scripts
 
 # [Optional] If your pip requirements rarely change, uncomment this section to add them to the image.
 COPY requirements.txt /tmp/pip-tmp/
 RUN pip --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requirements.txt \
    && rm -rf /tmp/pip-tmp
 
-USER ${USERNAME}
-WORKDIR /home/${USERNAME}
+# [Optional] Uncomment this section to install additional OS packages.
+# RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+#     && apt-get -y install --no-install-recommends vim
+
 ENV FLASK_APP web
 ENV FLASK_ENV development

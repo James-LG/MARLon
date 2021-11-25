@@ -1,5 +1,5 @@
 import json
-from cyberbattle._env.cyberbattle_env import EnvironmentBounds
+from cyberbattle._env.cyberbattle_env import CyberBattleEnv, EnvironmentBounds
 from cyberbattle.agents.baseline.agent_wrapper import ActionTrackingStateAugmentation, AgentWrapper
 import gym
 
@@ -7,7 +7,7 @@ import plotly
 import torch
 import numpy as np
 
-def generate_graph_json(cyberbattle_env, iteration):
+def generate_graph_json(cyberbattle_env: CyberBattleEnv, iteration):
     fig = cyberbattle_env.render_as_fig()
 
     graph_json = json.dumps((fig, iteration), cls=plotly.utils.PlotlyJSONEncoder)
@@ -55,3 +55,6 @@ def run_simulation(iteration_count):
             break
 
     return simulation
+
+if __name__ == "__main__":
+    run_simulation(1500)

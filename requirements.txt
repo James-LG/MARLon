@@ -99,7 +99,7 @@ PyOpenGL==3.1.0
 pyparsing==2.4.7
 pyrsistent==0.18.0
 pytest==5.4.3
-python-apt==1.6.5+ubuntu0.6
+python-apt==1.6.5+ubuntu0.7
 python-dateutil==2.8.2
 python-utils==2.5.6
 pytz==2021.3
