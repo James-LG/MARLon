@@ -49,9 +49,10 @@ def run_simulation(iteration_count):
         assert np.shape(reward) == ()
 
         # If there is a jump in the reward for this step, record it for UI display.
+        if done:
+            simulation.append(generate_graph_json(gym_env, iteration_count))
+            break
         if reward != 0 or iteration == iteration_count-1:
             simulation.append(generate_graph_json(gym_env, iteration+1))
-        if done:
-            break
-
+        
     return simulation
