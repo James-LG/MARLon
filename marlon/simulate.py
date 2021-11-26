@@ -34,7 +34,7 @@ def run_simulation(iteration_count):
 
     observation = wrapped_env.reset()
 
-    dql_run = torch.load('deepqctf.pkl')
+    dql_run = torch.load('deepq.pkl')
     learner = dql_run['learner']
 
     simulation = [generate_graph_json(gym_env, 0)]
@@ -52,8 +52,7 @@ def run_simulation(iteration_count):
         if done:
             simulation.append(generate_graph_json(gym_env, iteration_count))
         if reward != 0 or iteration == iteration_count-1:
-            simulation.append(generate_graph_json(gym_env, iteration+1))
-        
+            simulation.append(generate_graph_json(gym_env, iteration+1))  
 
     return simulation
 
