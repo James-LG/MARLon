@@ -16,7 +16,7 @@ def generate_graph_json(cyberbattle_env: CyberBattleEnv, iteration):
 
 def run_simulation(iteration_count):
     # Load the Gym environment
-    gymid = "CyberBattleToyCtf-v0"
+    gymid = "CyberBattleChain-v0"
     gym_env = gym.make(gymid)
 
     maximum_node_count = 12
@@ -49,10 +49,11 @@ def run_simulation(iteration_count):
         assert np.shape(reward) == ()
 
         # If there is a jump in the reward for this step, record it for UI display.
-        if reward != 0 or iteration == iteration_count-1:
-            simulation.append(generate_graph_json(gym_env, iteration+1))
         if done:
+            simulation.append(generate_graph_json(gym_env, iteration_count))
             break
+        if reward != 0 or iteration == iteration_count-1:
+            simulation.append(generate_graph_json(gym_env, iteration+1))  
 
     return simulation
 
