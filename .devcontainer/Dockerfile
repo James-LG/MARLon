@@ -35,3 +35,4 @@ RUN pip --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requi
 
 ENV FLASK_APP web
 ENV FLASK_ENV development
+ENV PYTHONPATH ${PYTHONPATH}:/workspaces/MARLon
