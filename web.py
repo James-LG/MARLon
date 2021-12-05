@@ -18,15 +18,17 @@ def sim(index):
     return graph_json
 
 @app.route('/upload-file', methods=['POST'])
-def upload_file():    
+def upload_file(): 
+    global simulation   
     if request.files['attackerFile']:
         afile = request.files['attackerFile']
     else:
         print("Missing Attacker File")
-        return render_template('index.html')
+        simulation = run_simulation(ITERATION_COUNT, 'tabularq.pkl')
+        return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(simulation))
 
     print("SIMULATING {}".format(afile.filename))
-    global simulation
+    
     simulation = run_simulation(ITERATION_COUNT, afile.filename)
 
     return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(simulation))

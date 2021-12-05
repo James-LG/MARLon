@@ -14,7 +14,7 @@ def generate_graph_json(cyberbattle_env: CyberBattleEnv, iteration):
 
     return graph_json
 
-def run_simulation(iteration_count, algorithm):
+def run_simulation(iteration_count, agent_file):
     # Load the Gym environment
     gymid = "CyberBattleToyCtf-v0"
     gym_env = gym.make(gymid)
@@ -34,7 +34,7 @@ def run_simulation(iteration_count, algorithm):
 
     observation = wrapped_env.reset()
 
-    dql_run = torch.load(algorithm)
+    dql_run = torch.load(agent_file)
     learner = dql_run['learner']
 
     simulation = [generate_graph_json(gym_env, 0)]
