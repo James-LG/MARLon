@@ -26,6 +26,7 @@ def upload_file():
         return render_template('index.html')
 
     print("SIMULATING {}".format(afile.filename))
+    global simulation
     simulation = run_simulation(ITERATION_COUNT, afile.filename)
 
     return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(simulation))
