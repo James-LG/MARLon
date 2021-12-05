@@ -1,12 +1,43 @@
 <!doctype html>
 <html>
- <body>
-  <h1>MARLon</h1>
-  <div id='chart' class='chart'”></div>
-  <button id="btnPrevious" disabled>Previous</button>
-  <span id="spnProgress"></span>
-  <button id="btnNext">Next</button>
-</body>
+    <style>
+        .d1 {
+            padding-left:2em;
+            border: 3px solid black;
+            background-color: #0d1117;
+            
+        }
+        
+        .button1:hover {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+    <body style="background-color: rgb(44, 43, 43);">
+        <div class="d1">
+        <span style="color: #c9d1d9;">
+            <h1>MARLon</h1>
+            <h2><span style="color:rgb(126, 17, 17);">Attacker ID: XXXX</span> &emsp; <span style="color: blue;">Defender ID: XXXX</span> &emsp; Current Score: XXXX</h2>
+            <div id='chart' class='chart'”></div>
+            <br/>
+
+            <form action="/upload-file" method="POST" enctype="multipart/form-data">
+                <strong><label>Select Attacker File</label></strong>
+                <input type="file" class="custom-file-input" name="attackerFile" id="aFile">
+                <br/><br/>
+                <strong><label>Select Defender File</label></strong>
+                <input type="file" class="custom-file-input" name="defenderFile" id="dFile" disabled>
+                <button type="submit" class="button button1">Simulate</button>
+            </form>
+            <br/>
+    
+            <button id="btnPrevious" disabled>Previous</button>
+            <span id="spnProgress"></span>
+            <button id="btnNext">Next</button>
+            <br/><br/>
+        </span>
+        </div>    
+    </body>
 
 <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
 <script type='text/javascript'>
