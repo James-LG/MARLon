@@ -2,7 +2,7 @@
 <html>
     <style>
         .d1 {
-            padding-left:2em;
+            padding-left:32px;
             border: 3px solid black;
             background-color: #0d1117;
             
@@ -61,7 +61,6 @@
             btnNext.disabled = false;
             btnPrevious.disabled = false;
         }
-
     }
 
     var max_sim = {{max_sim | safe}}
@@ -82,6 +81,13 @@
         await updateGraph();
     }
 
-    updateGraph();
+    if(max_sim == 0 && num_graphs == 0){
+        btnNext.disabled = true;
+        btnPrevious.disabled = true;   
+    }
+    else{
+        updateGraph();
+    }
+    
   </script>
 </html>
