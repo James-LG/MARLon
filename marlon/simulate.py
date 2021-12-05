@@ -14,9 +14,9 @@ def generate_graph_json(cyberbattle_env: CyberBattleEnv, iteration):
 
     return graph_json
 
-def run_simulation(iteration_count):
+def run_simulation(iteration_count, agent_file):
     # Load the Gym environment
-    gymid = "CyberBattleChain-v0"
+    gymid = "CyberBattleToyCtf-v0"
     gym_env = gym.make(gymid)
 
     maximum_node_count = 12
@@ -34,7 +34,7 @@ def run_simulation(iteration_count):
 
     observation = wrapped_env.reset()
 
-    dql_run = torch.load('deepq.pkl')
+    dql_run = torch.load(agent_file)
     learner = dql_run['learner']
 
     simulation = [generate_graph_json(gym_env, 0)]
@@ -58,4 +58,4 @@ def run_simulation(iteration_count):
     return simulation
 
 if __name__ == "__main__":
-    run_simulation(1500)
+    run_simulation(1500, 'tabularq.pkl')
