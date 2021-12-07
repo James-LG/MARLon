@@ -11,8 +11,8 @@ simulation = None
 @app.route('/')
 def home():
     if simulation is None:
-        return render_template('index.html', max_sim=0, num_graphs=0)
-    return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(simulation))
+        return render_template('index.html', max_sim=0, num_graphs=0, last_index=0)
+    return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(simulation), last_index=len(simulation))
 
 @app.route('/sim/<int:index>')
 def sim(index):
@@ -26,9 +26,13 @@ def upload_file():
         afile = request.files['attackerFile']
     else:
         print("Missing Attacker File")
-        simulation = run_simulation(ITERATION_COUNT, 'tabularq.pkl')
-        return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(simulation))
+        return render_template('index.html', max_sim=0, num_graphs=0, last_index=0)
 
-    print("SIMULATING {}".format(afile.filename))
     simulation = run_simulation(ITERATION_COUNT, afile.filename)
-    return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(simulation))
+    print("SIMULATING {} and length of {}".format(afile.filename, len(simulation)))
+    return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(simulation), last_index=len(simulation))
+
+@app.route('/defenderView')
+def defender_view():
+    print('Defender View')
+    return render_template('index.html', max_sim=0, num_graphs=0)

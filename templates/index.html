@@ -5,29 +5,100 @@
             padding-left:32px;
             border: 3px solid black;
             background-color: #0d1117;
-            
         }
         
-        .button1:hover {
-            background-color: #4CAF50;
-            color: white;
+        .simulate {
+            box-shadow:inset 0px 1px 0px 0px #a4e271;
+            background:linear-gradient(to bottom, #89c403 5%, #77a809 100%);
+            background-color:#89c403;
+            border-radius:6px;
+            border:1px solid #74b807;
+            display:inline-block;
+            cursor:pointer;
+            color:#ffffff;
+            font-family:Arial;
+            font-size:15px;
+            font-weight:bold;
+            padding:6px 24px;
+            text-decoration:none;
+            text-shadow:0px 1px 0px #528009;
         }
+        .simulate:hover {
+            background:linear-gradient(to bottom, #77a809 5%, #89c403 100%);
+            background-color:#77a809;
+        }
+        .simulate:active {
+            position:relative;
+            top:1px;
+        }
+
+        .defender {
+            box-shadow:inset 0px 1px 0px 0px #29bbff;
+            background:linear-gradient(to bottom, #2dabf9 5%, #0688fa 100%);
+            background-color:#2dabf9;
+            border-radius:6px;
+            border:1px solid #0b0e07;
+            display:inline-block;
+            cursor:pointer;
+            color:#ffffff;
+            font-family:Arial;
+            font-size:15px;
+            padding:6px 24px;
+            text-decoration:none;
+            text-shadow:0px 1px 0px #263666;
+        }
+        .defender:hover {
+            background:linear-gradient(to bottom, #0688fa 5%, #2dabf9 100%);
+            background-color:#0688fa;
+        }
+        .defender:active {
+            position:relative;
+            top:1px;
+        }
+
+        .attacker {
+            box-shadow:inset 0px 1px 0px 0px #fa0d0d;
+            background:linear-gradient(to bottom, #960f0f 5%, #e62828 100%);
+            background-color:#960f0f;
+            border-radius:6px;
+            border:1px solid #0b0e07;
+            display:inline-block;
+            cursor:pointer;
+            color:#ffffff;
+            font-family:Arial;
+            font-size:15px;
+            padding:6px 24px;
+            text-decoration:none;
+            text-shadow:0px 1px 0px #263666;
+        }
+        .attacker:hover {
+            background:linear-gradient(to bottom, #e62828 5%, #960f0f 100%);
+            background-color:#e62828;
+        }
+        .attacker:active {
+            position:relative;
+            top:1px;
+        }
+        
+
     </style>
     <body style="background-color: rgb(44, 43, 43);">
         <div class="d1">
         <span style="color: #c9d1d9;">
             <h1>MARLon</h1>
-            <h2><span style="color:rgb(126, 17, 17);">Attacker ID: XXXX</span> &emsp; <span style="color: blue;">Defender ID: XXXX</span> &emsp; Current Score: XXXX</h2>
+            <h2><span style="color:rgb(126, 17, 17);">Attacker ID: XXXX</span> &emsp; <span style="color: blue;">Defender ID: XXXX</span> &emsp; Current Score: <span id="spnScore">-</span></h2>
+            <strong>Switch to: </strong><button class="button defender" id="btnView">Defender View</button>
+            <br/><br/>
             <div id='chart' class='chart'”></div>
             <br/>
-
+            
             <form action="/upload-file" method="POST" enctype="multipart/form-data">
-                <strong><label>Select Attacker File</label></strong>
+                <strong>Select Attacker File</strong>
                 <input type="file" class="custom-file-input" name="attackerFile" id="aFile">
                 <br/><br/>
-                <strong><label>Select Defender File</label></strong>
+                <strong>Select Defender File</strong>
                 <input type="file" class="custom-file-input" name="defenderFile" id="dFile" disabled>
-                <button type="submit" class="button button1">Simulate</button>
+                <button type="submit" class="button simulate">Simulate</button>
             </form>
             <br/>
     
@@ -46,11 +117,12 @@
         let graphs = await response.json()
         Plotly.newPlot('chart',graphs[0],{});
         spnProgress.textContent = (graphs[1]) + '/' + (max_sim);
+        return graphs[2];
     }
 
     async function updateGraph () {
-        await renderGraph(index);
-
+        let current_score = await renderGraph(index);
+        spnScore.textContent = current_score;
         if (index == num_graphs-1) {
             btnNext.disabled = true;
             btnPrevious.disabled = false;
@@ -65,9 +137,11 @@
 
     var max_sim = {{max_sim | safe}}
     var num_graphs = {{num_graphs | safe}}
+    var last_index = {{last_index | safe}}
     var index = 0;
 
     var spnProgress = document.getElementById("spnProgress");
+    var spnScore = document.getElementById('spnScore');
 
     var btnNext = document.getElementById("btnNext");
     btnNext.onclick=async () => {
@@ -80,10 +154,29 @@
         --index;
         await updateGraph();
     }
+    
+    var defenderView = false;
+    var btnView = document.getElementById("btnView");
+    btnView.onclick=async () => {
+        defenderView = !defenderView;
+        if(defenderView){
+            btnView.innerHTML = 'Attacker View';
+            btnView.className = 'button attacker';
+            index = last_index -1;
+        }
+        else{
+            btnView.innerHTML = 'Defender View';
+            btnView.className = 'button defender';
+            index = 0;
+        }
+        await updateGraph();
+    }
 
     if(max_sim == 0 && num_graphs == 0){
         btnNext.disabled = true;
-        btnPrevious.disabled = true;   
+        btnPrevious.disabled = true;
+        btnView.disabled = true;
+           
     }
     else{
         updateGraph();
