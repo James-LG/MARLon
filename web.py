@@ -26,9 +26,8 @@ def upload_file():
         afile = request.files['attackerFile']
     else:
         print("Missing Attacker File")
-        simulation = run_simulation(ITERATION_COUNT, 'tabularq.pkl')
-        return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(simulation))
+        return render_template('index.html', max_sim=0, num_graphs=0)
 
-    print("SIMULATING {}".format(afile.filename))
     simulation = run_simulation(ITERATION_COUNT, afile.filename)
+    print("SIMULATING {} and length of {}".format(afile.filename, len(simulation)))
     return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(simulation))
