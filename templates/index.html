@@ -137,12 +137,11 @@
 
     var max_sim = {{max_sim | safe}}
     var num_graphs = {{num_graphs | safe}}
-    var last_index = {{last_index | safe}}
+    
     var index = 0;
 
     var spnProgress = document.getElementById("spnProgress");
     var spnScore = document.getElementById('spnScore');
-
     var btnNext = document.getElementById("btnNext");
     btnNext.onclick=async () => {
         ++index;
@@ -162,7 +161,7 @@
         if(defenderView){
             btnView.innerHTML = 'Attacker View';
             btnView.className = 'button attacker';
-            index = last_index -1;
+            index = num_graphs -1;
         }
         else{
             btnView.innerHTML = 'Defender View';

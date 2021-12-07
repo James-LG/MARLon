@@ -48,13 +48,13 @@ def run_simulation(iteration_count, agent_file):
         observation, reward, done, info = wrapped_env.step(gym_action)
         learner.on_step(wrapped_env, observation, reward, done, info, action_metadata)
         assert np.shape(reward) == ()
-
+        
+        current_score += reward
         # If there is a jump in the reward for this step, record it for UI display.
         if done:
             simulation.append(generate_graph_json(gym_env, iteration_count, current_score))
             break
         if reward != 0 or iteration == iteration_count-1:
-            current_score += reward
             simulation.append(generate_graph_json(gym_env, iteration+1, current_score))  
 
     return simulation
