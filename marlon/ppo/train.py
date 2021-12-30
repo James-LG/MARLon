@@ -1,11 +1,10 @@
 import gym
 import numpy as np
+import torch
 
 import cyberbattle
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.env_checker import check_env
-from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.utils import set_random_seed
 
 from marlon.ppo.wrapper import CyberbattleEnvWrapper
@@ -44,10 +43,14 @@ def main():
     model = PPO('MultiInputPolicy', env, verbose=1)
     model.learn(total_timesteps=1000)
 
+    model.save('ppo.zip')
+    del model
+    model = PPO.load('ppo.zip')
+
     obs = env.reset()
     for _ in range(1000):
         action, _states = model.predict(obs)
-        obs, rewards, dones, info = env.step(action)
+        obs, reward, done, info = env.step(action)
     
     tot_reward = np.sum(env.cyber_env._CyberBattleEnv__episode_rewards)
 

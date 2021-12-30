@@ -4,8 +4,11 @@ from cyberbattle.agents.baseline.agent_wrapper import ActionTrackingStateAugment
 import gym
 
 import plotly
+from stable_baselines3.ppo.ppo import PPO
 import torch
 import numpy as np
+
+from marlon.ppo.wrapper import CyberbattleEnvWrapper
 
 def generate_graph_json(cyberbattle_env: CyberBattleEnv, iteration, current_score):
     fig = cyberbattle_env.render_as_fig()
@@ -15,6 +18,40 @@ def generate_graph_json(cyberbattle_env: CyberBattleEnv, iteration, current_scor
     return graph_json
 
 def run_simulation(iteration_count, agent_file):
+    if agent_file.endswith('zip'):
+        return run_baselines_simulation(iteration_count, agent_file)
+    else:
+        return run_cyberbattle_simulation(iteration_count, agent_file)
+
+def run_baselines_simulation(iteration_count, agent_file):
+    # Load the Gym environment
+    gymid = "CyberBattleToyCtf-v0"
+    gym_env = gym.make(gymid)
+    gym_env = CyberbattleEnvWrapper(gym_env)
+
+    model = PPO.load(agent_file)
+
+    obs = gym_env.reset()
+
+    simulation = [generate_graph_json(gym_env, 0, 0)]
+    current_score = 0
+    for iteration in range(iteration_count):
+        action, _states = model.predict(obs)
+        obs, reward, done, info = gym_env.step(action)
+
+        assert np.shape(reward) == ()
+        
+        current_score += reward
+        # If there is a jump in the reward for this step, record it for UI display.
+        if done:
+            simulation.append(generate_graph_json(gym_env, iteration_count, current_score))
+            break
+        if reward != 0 or iteration == iteration_count-1:
+            simulation.append(generate_graph_json(gym_env, iteration+1, current_score))
+    
+    return simulation
+
+def run_cyberbattle_simulation(iteration_count, agent_file):
     # Load the Gym environment
     gymid = "CyberBattleToyCtf-v0"
     gym_env = gym.make(gymid)
@@ -55,7 +92,7 @@ def run_simulation(iteration_count, agent_file):
             simulation.append(generate_graph_json(gym_env, iteration_count, current_score))
             break
         if reward != 0 or iteration == iteration_count-1:
-            simulation.append(generate_graph_json(gym_env, iteration+1, current_score))  
+            simulation.append(generate_graph_json(gym_env, iteration+1, current_score))
 
     return simulation
 

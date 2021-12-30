@@ -6,6 +6,7 @@ import gym
 from cyberbattle._env.cyberbattle_env import Action, CyberBattleEnv, Observation
 from cyberbattle.simulation import model
 from gym import spaces
+from plotly.missing_ipywidgets import FigureWidget
 
 class CyberbattleEnvWrapper(gym.Env):
     nested_spaces = ['credential_cache_matrix', 'leaked_credentials']
@@ -199,3 +200,6 @@ class CyberbattleEnvWrapper(gym.Env):
 
     def render(self, mode: str = 'human') -> None:
         return self.cyber_env.render(mode)
+
+    def render_as_fig(self) -> FigureWidget:
+        return self.cyber_env.render_as_fig()
