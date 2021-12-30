@@ -1,4 +1,5 @@
 import json
+from typing import List, Optional
 from cyberbattle._env.cyberbattle_env import CyberBattleEnv, EnvironmentBounds
 from cyberbattle.agents.baseline.agent_wrapper import ActionTrackingStateAugmentation, AgentWrapper
 import gym
@@ -8,7 +9,10 @@ from stable_baselines3.ppo.ppo import PPO
 import torch
 import numpy as np
 
-from marlon.ppo.wrapper import CyberbattleEnvWrapper
+from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
+
+class SimulationCache:
+    value: Optional[List[str]] = None
 
 def generate_graph_json(cyberbattle_env: CyberBattleEnv, iteration, current_score):
     fig = cyberbattle_env.render_as_fig()
@@ -27,7 +31,7 @@ def run_baselines_simulation(iteration_count, agent_file):
     # Load the Gym environment
     gymid = "CyberBattleToyCtf-v0"
     gym_env = gym.make(gymid)
-    gym_env = CyberbattleEnvWrapper(gym_env)
+    gym_env = AttackerEnvWrapper(gym_env)
 
     model = PPO.load(agent_file)
 
@@ -37,7 +41,7 @@ def run_baselines_simulation(iteration_count, agent_file):
     current_score = 0
     for iteration in range(iteration_count):
         action, _states = model.predict(obs)
-        obs, reward, done, info = gym_env.step(action)
+        obs, reward, done, _info = gym_env.step(action)
 
         assert np.shape(reward) == ()
         
