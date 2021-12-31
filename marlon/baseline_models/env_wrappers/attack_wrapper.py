@@ -1,24 +1,31 @@
 from typing import Any, Dict, Tuple
+from gym.spaces.space import Space
 
 import numpy as np
 
 import gym
-from cyberbattle._env.cyberbattle_env import Action, CyberBattleEnv, Observation
+from cyberbattle._env.cyberbattle_env import Action, CyberBattleEnv, EnvironmentBounds, Observation
 from cyberbattle.simulation import model
 from gym import spaces
 from plotly.missing_ipywidgets import FigureWidget
 
-class CyberbattleEnvWrapper(gym.Env):
+class AttackerEnvWrapper(gym.Env):
+    '''
+    Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to attack.
+    '''
+
     nested_spaces = ['credential_cache_matrix', 'leaked_credentials']
     other_removed_spaces = ['local_vulnerability', 'remote_vulnerability', 'connect']
     int32_spaces = ['customer_data_found', 'escalation', 'lateral_move', 'newly_discovered_nodes_count', 'probe_result']
 
     def __init__(self, cyber_env: CyberBattleEnv):
         super().__init__()
-        self.cyber_env = cyber_env
-        self.bounds = self.cyber_env._bounds
-        self.observation_space = self.__create_observation_space(cyber_env)
-        self.action_space = self.__create_action_space(cyber_env)
+        self.cyber_env: CyberBattleEnv = cyber_env
+        self.bounds: EnvironmentBounds = self.cyber_env._bounds
+        self.observation_space: Space = self.__create_observation_space(cyber_env)
+        self.action_space: Space = self.__create_action_space(cyber_env)
+
+        self.__get_privilegelevel_array = cyber_env._CyberBattleEnv__get_privilegelevel_array
 
         self.valid_action_count = 0
         self.invalid_action_count = 0
@@ -75,7 +82,7 @@ class CyberbattleEnvWrapper(gym.Env):
         return spaces.MultiDiscrete(action_space)
 
     def __get_owned_nodes(self):
-        return np.nonzero(self.cyber_env._CyberBattleEnv__get_privilegelevel_array())[0]
+        return np.nonzero(self.__get_privilegelevel_array())[0]
 
     def step(self, action: Action) -> Tuple[Observation, float, bool, Dict[str, Any]]:
         # The first action value corresponds to the subspace

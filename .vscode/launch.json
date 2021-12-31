@@ -8,7 +8,14 @@
             "name": "Python: PPO Train",
             "type": "python",
             "request": "launch",
-            "program": "marlon/ppo/train.py",
+            "program": "marlon/baseline_models/ppo/train.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: PPO Evaluate",
+            "type": "python",
+            "request": "launch",
+            "program": "marlon/baseline_models/ppo/eval.py",
             "console": "integratedTerminal"
         }
     ]
