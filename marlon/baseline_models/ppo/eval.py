@@ -2,26 +2,31 @@ import numpy as np
 
 import gym
 import cyberbattle
+from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.ppo.ppo import PPO
+from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.callbacks import BaseCallback
 
 from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
 
-
-def main():
+def evaluate(max_timesteps):
     env_id = "CyberBattleToyCtf-v0"
-    env = gym.make(env_id)
-    env = AttackerEnvWrapper(env)
+    cyber_env = gym.make(env_id)
+    env = AttackerEnvWrapper(cyber_env, max_timesteps, enable_action_penalty=False)
 
     model = PPO.load('ppo.zip')
 
+    mean_reward, std_reward = evaluate_policy(model, Monitor(env), n_eval_episodes=10)
+
     obs = env.reset()
-    for _ in range(1000):
+    for _ in range(2000):
         action, _states = model.predict(obs)
         obs, _reward, _done, _info = env.step(action)
-    
-    tot_reward = np.sum(env.cyber_env._CyberBattleEnv__episode_rewards)
 
-    print('reward', tot_reward, 'valid actions', env.valid_action_count, 'invalid actions', env.invalid_action_count)
+    tot_reward = np.sum(env.rewards)
+
+    print('tot reward', tot_reward, 'mean reward', mean_reward, 'std reward', std_reward)
+    print('valid actions', env.valid_action_count, 'invalid actions', env.invalid_action_count)
 
 if __name__ == "__main__":
-    main()
+    evaluate(2000)

@@ -5,9 +5,14 @@ import numpy as np
 
 import gym
 from cyberbattle._env.cyberbattle_env import Action, CyberBattleEnv, EnvironmentBounds, Observation
-from cyberbattle.simulation import model
+from cyberbattle.simulation import commandcontrol, model
 from gym import spaces
+
 from plotly.missing_ipywidgets import FigureWidget
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+INVALID_ACTION_PENALTY = -1
 
 class AttackerEnvWrapper(gym.Env):
     '''
@@ -15,17 +20,26 @@ class AttackerEnvWrapper(gym.Env):
     '''
 
     nested_spaces = ['credential_cache_matrix', 'leaked_credentials']
-    other_removed_spaces = ['local_vulnerability', 'remote_vulnerability', 'connect']
+    other_removed_spaces = ['connect']
     int32_spaces = ['customer_data_found', 'escalation', 'lateral_move', 'newly_discovered_nodes_count', 'probe_result']
 
-    def __init__(self, cyber_env: CyberBattleEnv):
+    def __init__(self, cyber_env: CyberBattleEnv, max_timesteps=2000, enable_action_penalty=True):
         super().__init__()
         self.cyber_env: CyberBattleEnv = cyber_env
         self.bounds: EnvironmentBounds = self.cyber_env._bounds
+        self.max_timesteps = max_timesteps
+        self.enable_action_penalty = enable_action_penalty
+
+        # These should be set during reset()
+        self.timesteps = None
+        self.rewards = None
+
+        # Access protected members only in the ctor to avoid pylint warnings.
+        self.node_count = cyber_env._CyberBattleEnv__node_count
+        self.__get_privilegelevel_array = cyber_env._CyberBattleEnv__get_privilegelevel_array
+
         self.observation_space: Space = self.__create_observation_space(cyber_env)
         self.action_space: Space = self.__create_action_space(cyber_env)
-
-        self.__get_privilegelevel_array = cyber_env._CyberBattleEnv__get_privilegelevel_array
 
         self.valid_action_count = 0
         self.invalid_action_count = 0
@@ -38,6 +52,10 @@ class AttackerEnvWrapper(gym.Env):
         observation_space['remote_vulnerability'] = observation_space['action_mask']['remote_vulnerability']
         observation_space['connect'] = observation_space['action_mask']['connect']
         del observation_space['action_mask']
+
+        # Change action_mask spaces to use node count instead of maximum node count.
+        observation_space['local_vulnerability'] = spaces.MultiBinary(self.node_count * self.bounds.local_attacks_count)
+        observation_space['remote_vulnerability'] = spaces.MultiBinary(self.node_count * self.node_count * self.bounds.remote_attacks_count)
 
         # Remove 'info' fields added by cyberbattle that do not represent algorithm inputs
         del observation_space['credential_cache']
@@ -62,7 +80,7 @@ class AttackerEnvWrapper(gym.Env):
         self.action_subspaces = {}
         # First action defines which action subspace to use
         # local_vulnerability, remote_vulnerability, or connect
-        action_space = [2]
+        action_space = [3]
 
         # CyberBattle's action space is a dict of nested action spaces.
         # We need to flatten it into a single multidiscrete and keep
@@ -109,9 +127,10 @@ class AttackerEnvWrapper(gym.Env):
         # }
         # ```
 
-        # First, check if the action is valid
+        # First, check if the action is valid.
+        reward_modifier = 0
         if not self.cyber_env.is_action_valid(translated_action):
-            # If it is not valid, we will try picking a random valid node and hoping 
+            # If it is not valid, we will try picking a random valid node and hoping
             # that makes the action valid.
             
             # Pick source node at random (owned and with the desired feature encoding)
@@ -147,21 +166,33 @@ class AttackerEnvWrapper(gym.Env):
         # If the action is still invalid, sample a random valid action.
         # TODO: Try invalid action masks instead of sampling a random valid action; 'Dynamic action spaces'.
         # https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html
-        # TODO: Give a negative reward if invalid.
         if not self.cyber_env.is_action_valid(translated_action):
             # sample local and remote actions only (excludes connect action)
             translated_action = self.cyber_env.sample_valid_action(kinds=[0, 1, 2])
             self.invalid_action_count += 1
+
+            if self.enable_action_penalty:
+                reward_modifier = INVALID_ACTION_PENALTY
         else:
             self.valid_action_count += 1
 
         observation, reward, done, info = self.cyber_env.step(translated_action)
         transformed_observation = self.transform_observation(observation)
+
+        self.timesteps += 1
+        if self.timesteps > self.max_timesteps:
+            done = True
+
+        reward += reward_modifier
+        self.rewards.append(reward)
+
         return transformed_observation, reward, done, info
 
     def reset(self) -> Observation:
         self.valid_action_count = 0
         self.invalid_action_count = 0
+        self.timesteps = 0
+        self.rewards = []
         observation = self.cyber_env.reset()
         return self.transform_observation(observation)
 
@@ -177,14 +208,33 @@ class AttackerEnvWrapper(gym.Env):
         credential_cache_matrix = []
         for _ in range(self.bounds.maximum_total_credentials):
             credential_cache_matrix.append(np.zeros((2,)))
-        
+
         # TODO: Clean this up a bit, action masks are not needed here
         observation['credential_cache_matrix'] = tuple(credential_cache_matrix)
-        observation['local_vulnerability'] = np.zeros((self.bounds.maximum_node_count * self.bounds.local_attacks_count,))
-        observation['remote_vulnerability'] = np.zeros((self.bounds.maximum_node_count * self.bounds.maximum_node_count * self.bounds.remote_attacks_count,))
-        observation['connect'] = np.zeros((self.bounds.maximum_node_count * self.bounds.maximum_node_count * self.bounds.port_count * self.bounds.maximum_total_credentials,))
         observation['discovered_nodes_properties'] = np.zeros((self.bounds.maximum_node_count * self.bounds.property_count,))
         observation['nodes_privilegelevel'] = np.zeros((self.bounds.maximum_node_count,))
+
+        # Flatten action_mask subspaces
+        # local_vulnerability comes in shape (node_count, local_attacks_count,)
+        # but needs to be (node_count * local_attacks_count,)
+        local_vulnerability = np.zeros((self.node_count * self.bounds.local_attacks_count,))
+        flat_index = 0
+        for i in range(self.node_count):
+            for j in range(self.bounds.local_attacks_count):
+                local_vulnerability[flat_index] = observation['local_vulnerability'][i][j]
+                flat_index += 1
+        observation['local_vulnerability'] = local_vulnerability
+
+        # remote_vulnerability comes in shape (node_count, node_count, remote_attacks_count,)
+        # but needs to be (node_count * node_count * remote_attacks_count,)
+        remote_vulnerability = np.zeros((self.node_count * self.node_count * self.bounds.remote_attacks_count,))
+        flat_index = 0
+        for i in range(self.node_count):
+            for j in range(self.node_count):
+                for k in range(self.bounds.local_attacks_count):
+                    remote_vulnerability[flat_index] = observation['remote_vulnerability'][i][j][k]
+                    flat_index += 1
+        observation['remote_vulnerability'] = remote_vulnerability
 
         # Remove 'info' fields added by cyberbattle that do not represent algorithm inputs
         del observation['credential_cache']
@@ -208,5 +258,23 @@ class AttackerEnvWrapper(gym.Env):
     def render(self, mode: str = 'human') -> None:
         return self.cyber_env.render(mode)
 
-    def render_as_fig(self) -> FigureWidget:
-        return self.cyber_env.render_as_fig()
+    def render_as_fig(self, print_attacks=False) -> FigureWidget:
+        # NOTE: This method is exactly the same as CyberBattleEnv.render_as_fig() except where noted.
+
+        debug = commandcontrol.EnvironmentDebugging(self.cyber_env._actuator)
+        # CHANGE: Parameter to decide whether to print this.
+        if print_attacks:
+            self.cyber_env._actuator.print_all_attacks()
+
+        # plot the cumulative reward and network side by side using plotly
+        fig = make_subplots(rows=1, cols=2)
+
+        # CHANGE: Uses this environment's rewards instead of CyberBattle's.
+        fig.add_trace(go.Scatter(y=np.array(self.rewards).cumsum(),
+            name='cumulative reward'), row=1, col=1)
+
+        traces, layout = debug.network_as_plotly_traces(xref="x2", yref="y2")
+        for trace in traces:
+            fig.add_trace(trace, row=1, col=2)
+        fig.update_layout(layout)
+        return fig
