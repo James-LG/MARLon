@@ -17,6 +17,13 @@
             "request": "launch",
             "program": "marlon/baseline_models/ppo/eval.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: PPO Train Defender",
+            "type": "python",
+            "request": "launch",
+            "program": "marlon/baseline_models/ppo/train_defender.py",
+            "console": "integratedTerminal"
         }
     ]
 }
