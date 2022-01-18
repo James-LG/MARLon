@@ -170,14 +170,14 @@ class DefenderEnvWrapper(gym.Env):
             if service_from_action >= len(node_info.services):
                 return False
             return True
-
-        if action[0] == 0:
+        action_number = action[0]
+        if action_number == 0:
             # REIMAGE
             _, node_info = get_node_and_info(action[1])
             # If the node does not exist, or if the node is not currently running, this action is invalid.
             return node_exists_and_running(action[1]) and is_reimagable(node_info)
 
-        elif action[0] == 1:
+        elif action_number == 1:
             # block traffic
             _, node_info = get_node_and_info(action[2])
             # If the node does not exist, or if the node is not currently running, this action is invalid.
