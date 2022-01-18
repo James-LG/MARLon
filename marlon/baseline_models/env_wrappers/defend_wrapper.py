@@ -128,9 +128,7 @@ class DefenderEnvWrapper(gym.Env):
 
         def node_exists(node_id: model.NodeID):
             """Determines if a node exists in the network"""
-            if node_id in list(self.cyber_env.environment.network.nodes):
-                return True
-            return False
+            return node_id in list(self.cyber_env.environment.network.nodes)
 
         def node_running(node_info: model.NodeInfo):
             """Determines if a node is currently running"""
