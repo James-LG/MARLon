@@ -153,9 +153,7 @@ class DefenderEnvWrapper(gym.Env):
                 for rule in node_info.firewall.incoming:
                     firewall_list.append(rule.port)
 
-            if self.firewall_rule_list[port_from_action] not in firewall_list:
-                return False
-            return True
+            return self.firewall_rule_list[port_from_action] in firewall_list
 
         def service_exists(node_info: model.NodeInfo, service_from_action: int):
             """Checks if a service exists on a node"""
