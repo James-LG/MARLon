@@ -20,7 +20,7 @@ class ReimageDefender(cyberDefender.DefenderAgent):
                         else:
                             cyberDefender.logging.error(f"Defender detected malware, but node cannot be reimaged {node_id}")
 
-class prototype_learning_defender(cyberDefender.DefenderAgent):
+class PrototypeLearningDefender(cyberDefender.DefenderAgent):
     """A defender that in theory will link up into the defend_wrapper"""
     next_action = []
     firewall_rule_list = ["RDP", "SSH", "HTTPS", "HTTP", "su", "sudo"]

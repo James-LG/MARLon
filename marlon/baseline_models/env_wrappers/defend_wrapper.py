@@ -22,7 +22,7 @@ class DefenderEnvWrapper(gym.Env):
     int32_spaces = ['customer_data_found', 'escalation', 'lateral_move', 'newly_discovered_nodes_count', 'probe_result']
     firewall_rule_list = ["RDP", "SSH", "HTTPS", "HTTP", "su", "sudo"]
 
-    def __init__(self, cyber_env: CyberBattleEnv):
+    def __init__(self, cyber_env: CyberBattleEnv, max_timesteps=100, enable_action_penalty=True):
         super().__init__()
         self.cyber_env: CyberBattleEnv = cyber_env
         self.bounds: EnvironmentBounds = self.cyber_env._bounds
@@ -31,9 +31,13 @@ class DefenderEnvWrapper(gym.Env):
         self.__get_privilegelevel_array = cyber_env._CyberBattleEnv__get_privilegelevel_array
         self.valid_action_count = 0
         self.invalid_action_count = 0
+        self.max_timesteps = max_timesteps
+        self.timesteps = 0
+        self.rewards = []
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         """Creates a compatible version of the attackers observation space."""
+        # TODO Change to defender view.
         observation_space = cyber_env.observation_space.__dict__['spaces']
 
         # Flatten the action_mask field.
@@ -106,6 +110,10 @@ class DefenderEnvWrapper(gym.Env):
         # Execute the step
         observation, reward, done, info = self.cyber_env.step(attacker_action)
         transformed_observation = self.transform_observation(observation)
+        self.timesteps += 1
+        if self.timesteps > self.max_timesteps:
+            done = True
+        self.rewards.append(reward)
         return transformed_observation, reward, done, info
 
     def is_defender_action_valid(self, action) -> boolean:
@@ -142,7 +150,6 @@ class DefenderEnvWrapper(gym.Env):
         def is_reimagable(node_info: model.NodeInfo):
             """Checks if a given node is reimagable"""
             return node_info.reimagable
-
         def firewall_rule_exists(node_info: model.NodeInfo, port_from_action: int, incoming :bool):
             """Checks a node to see if a given firewall rule exists on it."""
             firewall_list = []
@@ -200,9 +207,12 @@ class DefenderEnvWrapper(gym.Env):
         self.valid_action_count = 0
         self.invalid_action_count = 0
         observation = self.cyber_env.reset()
+        self.rewards = []
+        self.timesteps = 0
         return self.transform_observation(observation)
 
     def transform_observation(self, observation) -> Observation:
+        # TODO Change to defender view.
         # Flatten the action_mask field
         observation['local_vulnerability'] = observation['action_mask']['local_vulnerability']
         observation['remote_vulnerability'] = observation['action_mask']['remote_vulnerability']

@@ -1,30 +1,31 @@
-from cyberbattle._env.cyberbattle_env import DefenderConstraint
 import numpy as np
 
 import gym
-import cyberbattle
+from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.ppo.ppo import PPO
+from stable_baselines3.common.evaluation import evaluate_policy
 
 from marlon.baseline_models.env_wrappers.defend_wrapper import DefenderEnvWrapper
-from marlon.defender_agents.defender import prototype_learning_defender
+from marlon.defender_agents.defender import PrototypeLearningDefender
 
-
-def main():
+def evaluate(max_timesteps):
     env_id = "CyberBattleToyCtf-v0"
-    env = gym.make(env_id,
-                    defender_agent=prototype_learning_defender())
-    env = DefenderEnvWrapper(env)
+    cyber_env = gym.make(env_id,
+                    defender_agent=PrototypeLearningDefender())
+    env = DefenderEnvWrapper(cyber_env)
 
     model = PPO.load('ppo_defender.zip')
 
+    mean_reward, std_reward = evaluate_policy(model, Monitor(env), n_eval_episodes=10)
+
     obs = env.reset()
-    for _ in range(1000):
+    for _ in range(2000):
         action, _states = model.predict(obs)
         obs, _reward, _done, _info = env.step(action)
-    
-    tot_reward = np.sum(env.cyber_env._CyberBattleEnv__episode_rewards)
-
-    print('reward', tot_reward, 'valid actions', env.valid_action_count, 'invalid actions', env.invalid_action_count)
+        
+    tot_rewards = np.sum(env.rewards)
+    print('tot reward', tot_rewards, 'mean reward', mean_reward, 'std reward', std_reward)
+    print('valid actions', env.valid_action_count, 'invalid actions', env.invalid_action_count)
 
 if __name__ == "__main__":
-    main()
+    evaluate(2000)
