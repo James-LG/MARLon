@@ -31,7 +31,7 @@ def run_baselines_simulation(iteration_count, agent_file):
     # Load the Gym environment
     gymid = "CyberBattleToyCtf-v0"
     gym_env = gym.make(gymid)
-    gym_env = AttackerEnvWrapper(gym_env)
+    gym_env = AttackerEnvWrapper(gym_env, enable_action_penalty=False)
 
     model = PPO.load(agent_file)
 
@@ -44,13 +44,10 @@ def run_baselines_simulation(iteration_count, agent_file):
         obs, reward, done, _info = gym_env.step(action)
 
         assert np.shape(reward) == ()
-        
+
         current_score += reward
         # If there is a jump in the reward for this step, record it for UI display.
-        if done:
-            simulation.append(generate_graph_json(gym_env, iteration_count, current_score))
-            break
-        if reward != 0 or iteration == iteration_count-1:
+        if done or reward > 0 or iteration == iteration_count-1:
             simulation.append(generate_graph_json(gym_env, iteration+1, current_score))
     
     return simulation
@@ -81,7 +78,7 @@ def run_cyberbattle_simulation(iteration_count, agent_file):
     simulation = [generate_graph_json(gym_env, 0, 0)]
     current_score = 0
     for iteration in range(iteration_count):
-        
+
         _, gym_action, action_metadata = learner.exploit(wrapped_env, observation)
         if not gym_action:
             _, gym_action, action_metadata = learner.explore(wrapped_env)
@@ -89,16 +86,13 @@ def run_cyberbattle_simulation(iteration_count, agent_file):
         observation, reward, done, info = wrapped_env.step(gym_action)
         learner.on_step(wrapped_env, observation, reward, done, info, action_metadata)
         assert np.shape(reward) == ()
-        
+
         current_score += reward
         # If there is a jump in the reward for this step, record it for UI display.
-        if done:
-            simulation.append(generate_graph_json(gym_env, iteration_count, current_score))
-            break
-        if reward != 0 or iteration == iteration_count-1:
+        if done or reward != 0 or iteration == iteration_count-1:
             simulation.append(generate_graph_json(gym_env, iteration+1, current_score))
 
     return simulation
 
 if __name__ == "__main__":
-    run_simulation(1500, 'tabularq.pkl')
+    run_simulation(2000, 'ppo.zip')
