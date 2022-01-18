@@ -14,7 +14,7 @@ import logging
 
 class DefenderEnvWrapper(gym.Env):
     '''
-    Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to attack.
+    Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to defend.
     '''
 
     nested_spaces = ['credential_cache_matrix', 'leaked_credentials']
