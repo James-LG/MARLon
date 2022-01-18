@@ -132,9 +132,7 @@ class DefenderEnvWrapper(gym.Env):
 
         def node_running(node_info: model.NodeInfo):
             """Determines if a node is currently running"""
-            if node_info.status == model.MachineStatus.Running:
-                return True
-            return False
+            return node_info.status == model.MachineStatus.Running
 
         def node_exists_and_running(node_from_action: int):
             """Determines if a node exists in the network, and if so if it is running."""
