@@ -181,20 +181,20 @@ class DefenderEnvWrapper(gym.Env):
             # The firewall rule needs to exist as well to block the traffic.
             return node_exists_and_running(action[2]) and firewall_rule_exists(node_info, action[3], bool(action[4]))
 
-        elif action[0] == 2:
+        elif action_number == 2:
             # allow traffic
             _, node_info = get_node_and_info(action[5])
             # If the node does not exist, or if the node is not currently running, this action is invalid.
             return node_exists_and_running(action[5])
 
-        elif action[0] == 3:
+        elif action_number == 3:
             # stop service
             # If the node does not exist, or if the node is not currently running, this action is invalid.
             # Also if the service to stop does not exist, this is invalid
             _, node_info = get_node_and_info(action[8])
             return node_exists_and_running(action[8]) and service_exists(node_info, action[9])
 
-        elif action[0] == 4:
+        elif action_number == 4:
             # start service
             # If the node does not exist, or if the node is not currently running, this action is invalid.
             # Also if the service to start does not exist, this is invalid
