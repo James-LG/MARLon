@@ -159,9 +159,7 @@ class DefenderEnvWrapper(gym.Env):
             """Checks if a service exists on a node"""
             # TODO IS THIS GOOD? This is just checking if its out of bounds...
             # The names could be in a different order, so action 1 could be one service on one node and a differnet on another...
-            if service_from_action >= len(node_info.services):
-                return False
-            return True
+            return service_from_action < len(node_info.services)
         action_number = action[0]
         if action_number == 0:
             # REIMAGE
