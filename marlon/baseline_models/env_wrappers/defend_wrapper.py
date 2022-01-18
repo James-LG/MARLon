@@ -141,9 +141,7 @@ class DefenderEnvWrapper(gym.Env):
 
         def is_reimagable(node_info: model.NodeInfo):
             """Checks if a given node is reimagable"""
-            if node_info.reimagable:
-                return True
-            return False
+            return node_info.reimagable
 
         def firewall_rule_exists(node_info: model.NodeInfo, port_from_action: int, incoming :bool):
             """Checks a node to see if a given firewall rule exists on it."""
