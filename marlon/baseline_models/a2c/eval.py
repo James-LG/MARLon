@@ -22,7 +22,7 @@ def evaluate(max_timesteps):
         action, _states = model.predict(obs)
         obs, _reward, _done, _info = env.step(action)
 
-    tot_reward = np.sum(env.rewards)
+    tot_reward = np.sum(env.cyber_rewards)
 
     print('tot reward', tot_reward, 'mean reward', mean_reward, 'std reward', std_reward)
     print('valid actions', env.valid_action_count, 'invalid actions', env.invalid_action_count)

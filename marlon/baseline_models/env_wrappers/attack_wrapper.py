@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 from gym.spaces.space import Space
 
 import numpy as np
@@ -12,9 +12,11 @@ from plotly.missing_ipywidgets import FigureWidget
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
+
 INVALID_ACTION_PENALTY = -1
 
-class AttackerEnvWrapper(gym.Env):
+class AttackerEnvWrapper(gym.Env, IRewardStore):
     '''
     Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to attack.
     '''
@@ -32,7 +34,7 @@ class AttackerEnvWrapper(gym.Env):
 
         # These should be set during reset()
         self.timesteps = None
-        self.rewards = None
+        self.cyber_rewards = None
 
         # Access protected members only in the ctor to avoid pylint warnings.
         self.node_count = cyber_env._CyberBattleEnv__node_count
@@ -45,7 +47,7 @@ class AttackerEnvWrapper(gym.Env):
         self.invalid_action_count = 0
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
-        observation_space = cyber_env.observation_space.__dict__['spaces']
+        observation_space = cyber_env.observation_space.__dict__['spaces'].copy()
 
         # Flatten the action_mask field.
         observation_space['local_vulnerability'] = observation_space['action_mask']['local_vulnerability']
@@ -184,7 +186,7 @@ class AttackerEnvWrapper(gym.Env):
             done = True
 
         reward += reward_modifier
-        self.rewards.append(reward)
+        self.cyber_rewards.append(reward)
 
         return transformed_observation, reward, done, info
 
@@ -192,7 +194,7 @@ class AttackerEnvWrapper(gym.Env):
         self.valid_action_count = 0
         self.invalid_action_count = 0
         self.timesteps = 0
-        self.rewards = []
+        self.cyber_rewards = []
         observation = self.cyber_env.reset()
         return self.transform_observation(observation)
 
@@ -270,7 +272,7 @@ class AttackerEnvWrapper(gym.Env):
         fig = make_subplots(rows=1, cols=2)
 
         # CHANGE: Uses this environment's rewards instead of CyberBattle's.
-        fig.add_trace(go.Scatter(y=np.array(self.rewards).cumsum(),
+        fig.add_trace(go.Scatter(y=np.array(self.cyber_rewards).cumsum(),
             name='cumulative reward'), row=1, col=1)
 
         traces, layout = debug.network_as_plotly_traces(xref="x2", yref="y2")
@@ -278,3 +280,6 @@ class AttackerEnvWrapper(gym.Env):
             fig.add_trace(trace, row=1, col=2)
         fig.update_layout(layout)
         return fig
+
+    def get_episode_rewards(self) -> List[float]:
+        return self.cyber_rewards

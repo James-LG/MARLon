@@ -12,6 +12,8 @@ from gym import spaces
 from plotly.missing_ipywidgets import FigureWidget
 import logging
 
+from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
+
 
 Defender_Observation = TypedDict('Defender_Observation', {'infected_nodes': np.ndarray,
                                                           'incoming_firewall_status':np.ndarray,
@@ -27,7 +29,11 @@ class DefenderEnvWrapper(gym.Env):
     int32_spaces = ['customer_data_found', 'escalation', 'lateral_move', 'newly_discovered_nodes_count', 'probe_result']
     firewall_rule_list = ["RDP", "SSH", "HTTPS", "HTTP", "su", "sudo"]
 
-    def __init__(self, cyber_env: CyberBattleEnv, max_timesteps=100, enable_action_penalty=True):
+    def __init__(self,
+        cyber_env: CyberBattleEnv,
+        attacker_reward_store: IRewardStore,
+        max_timesteps=100,
+        enable_action_penalty=True):
         super().__init__()
         self.cyber_env: CyberBattleEnv = cyber_env
         self.bounds: EnvironmentBounds = self.cyber_env._bounds
@@ -40,13 +46,12 @@ class DefenderEnvWrapper(gym.Env):
         self.max_timesteps = max_timesteps
         self.timesteps = 0
         self.rewards = []
+        self.attacker_reward_store = attacker_reward_store
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
-        """Creates an observation space for the defender. Consists of:
-        a list all node's infected status,
-        All nodes incoming firewall status,
-        all nodes outgoing firewall status,
-        all services statuses."""
+        """Creates a compatible version of the attackers observation space."""
+        # TODO Change to defender view.
+        observation_space = cyber_env.observation_space.__dict__['spaces'].copy()
 
         # Calculate how many services there are, this is used to define the maximum number of services active at once.
         for _, node in model.iterate_network_nodes(cyber_env.environment.network):
@@ -96,15 +101,10 @@ class DefenderEnvWrapper(gym.Env):
             self.valid_action_count += 1
         # Tell the defender which action was choosen
         self.cyber_env._CyberBattleEnv__defender_agent.next_action = action
-
-        # Currently the defender is playing against a random agent.
-        attacker_action = self.cyber_env.sample_valid_action(kinds=[0, 1, 2])
         
-        # Execute the step
-        attacker_observation, reward, done, info = self.cyber_env.step(attacker_action)
         # Take the reward gained this step from the attacker's step and invert it so the defender 
         # loses more reward if the attacker succeeds.
-        reward = -1*(reward)
+        reward = -1*self.attacker_reward_store.get_episode_rewards()[-1]
 
         # Generate the new defender observation based on the defender's action
         defender_observation = self.observe()
@@ -112,7 +112,7 @@ class DefenderEnvWrapper(gym.Env):
         if self.timesteps > self.max_timesteps:
             done = True
         self.rewards.append(reward)
-        return defender_observation, reward, done, info
+        return defender_observation, reward, done, {}
 
     def is_defender_action_valid(self, action) -> boolean:
         """Determines if a given action is valid within the environment."""
