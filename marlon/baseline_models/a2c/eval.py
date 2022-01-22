@@ -2,7 +2,7 @@ import numpy as np
 
 import gym
 import cyberbattle
-from stable_baselines3 import PPO
+from stable_baselines3 import A2C
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.evaluation import evaluate_policy
 
@@ -11,12 +11,9 @@ from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrappe
 def evaluate(max_timesteps):
     env_id = "CyberBattleToyCtf-v0"
     cyber_env = gym.make(env_id)
-    env = AttackerEnvWrapper(
-        cyber_env,
-        max_timesteps,
-        enable_action_penalty=False)
+    env = AttackerEnvWrapper(cyber_env, max_timesteps, enable_action_penalty=False)
 
-    model = PPO.load('ppo.zip')
+    model = A2C.load('a2c.zip')
 
     mean_reward, std_reward = evaluate_policy(model, Monitor(env), n_eval_episodes=10)
 

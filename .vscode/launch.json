@@ -5,6 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: PPO Evaluate Defender",
+            "type": "python",
+            "request": "launch",
+            "program": "marlon/baseline_models/ppo/eval_defender.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Python: PPO Train Defender",
+            "type": "python",
+            "request": "launch",
+            "program": "marlon/baseline_models/ppo/train_defender.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
             "name": "Python: PPO Train",
             "type": "python",
             "request": "launch",
@@ -17,6 +33,22 @@
             "type": "python",
             "request": "launch",
             "program": "marlon/baseline_models/ppo/eval.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Python: A2C Train",
+            "type": "python",
+            "request": "launch",
+            "program": "marlon/baseline_models/a2c/train.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Python: A2C Evaluate",
+            "type": "python",
+            "request": "launch",
+            "program": "marlon/baseline_models/a2c/eval.py",
             "console": "integratedTerminal",
             "justMyCode": false
         }

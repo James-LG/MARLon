@@ -5,7 +5,7 @@ from cyberbattle.agents.baseline.agent_wrapper import ActionTrackingStateAugment
 import gym
 
 import plotly
-from stable_baselines3.ppo.ppo import PPO
+from stable_baselines3 import PPO, A2C
 import torch
 import numpy as np
 
@@ -22,18 +22,20 @@ def generate_graph_json(cyberbattle_env: CyberBattleEnv, iteration, current_scor
     return graph_json
 
 def run_simulation(iteration_count, agent_file):
-    if agent_file.endswith('zip'):
-        return run_baselines_simulation(iteration_count, agent_file)
+    if agent_file.endswith('.zip'):
+        if agent_file == 'ppo.zip':
+            model = PPO.load(agent_file)
+        elif agent_file == 'a2c.zip':
+            model = A2C.load(agent_file)
+        return run_baselines_simulation(model, iteration_count)
     else:
         return run_cyberbattle_simulation(iteration_count, agent_file)
 
-def run_baselines_simulation(iteration_count, agent_file):
+def run_baselines_simulation(model, iteration_count):
     # Load the Gym environment
     gymid = "CyberBattleToyCtf-v0"
     gym_env = gym.make(gymid)
     gym_env = AttackerEnvWrapper(gym_env, enable_action_penalty=False)
-
-    model = PPO.load(agent_file)
 
     obs = gym_env.reset()
 
@@ -49,7 +51,7 @@ def run_baselines_simulation(iteration_count, agent_file):
         # If there is a jump in the reward for this step, record it for UI display.
         if done or reward > 0 or iteration == iteration_count-1:
             simulation.append(generate_graph_json(gym_env, iteration+1, current_score))
-    
+
     return simulation
 
 def run_cyberbattle_simulation(iteration_count, agent_file):
