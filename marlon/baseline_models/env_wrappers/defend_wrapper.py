@@ -1,8 +1,8 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, TypedDict
 import boolean
 import cyberbattle
 from gym.spaces.space import Space
-
+from cyberbattle.simulation import model
 import numpy as np
 
 import gym
@@ -12,6 +12,11 @@ from gym import spaces
 from plotly.missing_ipywidgets import FigureWidget
 import logging
 
+
+Defender_Observation = TypedDict('Defender_Observation', {'infected_nodes': np.ndarray,
+                                                          'incoming_firewall_status':np.ndarray,
+                                                          'outgoing_firewall_status':np.ndarray,
+                                                          'services_status':np.ndarray})
 class DefenderEnvWrapper(gym.Env):
     '''
     Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to defend.
@@ -26,6 +31,7 @@ class DefenderEnvWrapper(gym.Env):
         super().__init__()
         self.cyber_env: CyberBattleEnv = cyber_env
         self.bounds: EnvironmentBounds = self.cyber_env._bounds
+        self.num_services = 0
         self.observation_space: Space = self.__create_observation_space(cyber_env)
         self.action_space: Space = self.__create_defender_action_space(cyber_env)
         self.__get_privilegelevel_array = cyber_env._CyberBattleEnv__get_privilegelevel_array
@@ -36,34 +42,21 @@ class DefenderEnvWrapper(gym.Env):
         self.rewards = []
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
-        """Creates a compatible version of the attackers observation space."""
-        # TODO Change to defender view.
-        observation_space = cyber_env.observation_space.__dict__['spaces']
+        """Creates an observation space for the defender. Consists of:
+        a list all node's infected status,
+        All nodes incoming firewall status,
+        all nodes outgoing firewall status,
+        all services statuses."""
 
-        # Flatten the action_mask field.
-        observation_space['local_vulnerability'] = observation_space['action_mask']['local_vulnerability']
-        observation_space['remote_vulnerability'] = observation_space['action_mask']['remote_vulnerability']
-        observation_space['connect'] = observation_space['action_mask']['connect']
-        del observation_space['action_mask']
-
-        # Remove 'info' fields added by cyberbattle that do not represent algorithm inputs
-        del observation_space['credential_cache']
-        del observation_space['discovered_nodes']
-        del observation_space['explored_network']
-
-        # TODO: Reformat these spaces so they don't have to be removed
-        # Remove nested Tuple/Dict spaces
-        for space in self.nested_spaces + self.other_removed_spaces:
-            del observation_space[space]
-
-        # This is incorrectly set to spaces.MultiBinary(2)
-        # It's a single value in the returned observations
-        observation_space['customer_data_found'] = spaces.Discrete(2)
-
-        # This is incorrectly set to spaces.MultiDiscrete(model.PrivilegeLevel.MAXIMUM + 1), when it is only one value
-        observation_space['escalation'] = spaces.Discrete(model.PrivilegeLevel.MAXIMUM + 1)
-        
-        return spaces.Dict(observation_space)
+        # Calculate how many services there are, this is used to define the maximum number of services active at once.
+        for _, node in model.iterate_network_nodes(cyber_env.environment.network):
+            for _ in node.services:
+                self.num_services +=1
+        # All spaces are MultiBinary.
+        return spaces.Dict({'infected_nodes': spaces.MultiBinary(len(list(cyber_env.environment.network.nodes))),
+                            'incoming_firewall_status': spaces.MultiBinary(len(self.firewall_rule_list)*len(list(cyber_env.environment.network.nodes))),
+                            'outgoing_firewall_status': spaces.MultiBinary(len(self.firewall_rule_list)*len(list(cyber_env.environment.network.nodes))),
+                            'services_status': spaces.MultiBinary(self.num_services)})
 
     def __create_defender_action_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         # 0th index of the action defines which action to use (reimage, block_traffic, allow_traffic, stop_service, start_service)
@@ -108,13 +101,18 @@ class DefenderEnvWrapper(gym.Env):
         attacker_action = self.cyber_env.sample_valid_action(kinds=[0, 1, 2])
         
         # Execute the step
-        observation, reward, done, info = self.cyber_env.step(attacker_action)
-        transformed_observation = self.transform_observation(observation)
+        attacker_observation, reward, done, info = self.cyber_env.step(attacker_action)
+        # Take the reward gained this step from the attacker's step and invert it so the defender 
+        # loses more reward if the attacker succeeds.
+        reward = -1*(reward)
+
+        # Generate the new defender observation based on the defender's action
+        defender_observation = self.observe()
         self.timesteps += 1
         if self.timesteps > self.max_timesteps:
             done = True
         self.rewards.append(reward)
-        return transformed_observation, reward, done, info
+        return defender_observation, reward, done, info
 
     def is_defender_action_valid(self, action) -> boolean:
         """Determines if a given action is valid within the environment."""
@@ -157,7 +155,7 @@ class DefenderEnvWrapper(gym.Env):
                 for rule in node_info.firewall.incoming:
                     firewall_list.append(rule.port)
             else:
-                for rule in node_info.firewall.incoming:
+                for rule in node_info.firewall.outgoing:
                     firewall_list.append(rule.port)
 
             return self.firewall_rule_list[port_from_action] in firewall_list
@@ -206,48 +204,62 @@ class DefenderEnvWrapper(gym.Env):
     def reset(self) -> Observation:
         self.valid_action_count = 0
         self.invalid_action_count = 0
-        observation = self.cyber_env.reset()
+        self.cyber_env.reset()
         self.rewards = []
         self.timesteps = 0
-        return self.transform_observation(observation)
+        return self.observe()
 
-    def transform_observation(self, observation) -> Observation:
-        # TODO Change to defender view.
-        # Flatten the action_mask field
-        observation['local_vulnerability'] = observation['action_mask']['local_vulnerability']
-        observation['remote_vulnerability'] = observation['action_mask']['remote_vulnerability']
-        observation['connect'] = observation['action_mask']['connect']
-        del observation['action_mask']
+    def get_blank_defender_observation(self):
+        """Creates a empty defender observation."""
+        obs = Defender_Observation(infected_nodes = [],
+                                    incoming_firewall_status=[],
+                                    outgoing_firewall_status=[],
+                                    services_status=[])
+        return obs
 
-        # TODO: Retain real values
-        #if observation['credential_cache_matrix'].shape == (1,2):
-        credential_cache_matrix = []
-        for _ in range(self.bounds.maximum_total_credentials):
-            credential_cache_matrix.append(np.zeros((2,)))
-        
-        # TODO: Clean this up a bit, action masks are not needed here
-        observation['credential_cache_matrix'] = tuple(credential_cache_matrix)
-        observation['local_vulnerability'] = np.zeros((self.bounds.maximum_node_count * self.bounds.local_attacks_count,))
-        observation['remote_vulnerability'] = np.zeros((self.bounds.maximum_node_count * self.bounds.maximum_node_count * self.bounds.remote_attacks_count,))
-        observation['connect'] = np.zeros((self.bounds.maximum_node_count * self.bounds.maximum_node_count * self.bounds.port_count * self.bounds.maximum_total_credentials,))
-        observation['discovered_nodes_properties'] = np.zeros((self.bounds.maximum_node_count * self.bounds.property_count,))
-        observation['nodes_privilegelevel'] = np.zeros((self.bounds.maximum_node_count,))
+    def observe(self) -> Defender_Observation:
+        """Gathers information directly from the environment to generate populate an observation for the defender agent to use."""
 
-        # Remove 'info' fields added by cyberbattle that do not represent algorithm inputs
-        del observation['credential_cache']
-        del observation['discovered_nodes']
-        del observation['explored_network']
+        new_observation=self.get_blank_defender_observation()
+        incoming_firewall_list = [0]*(len(self.cyber_env.environment.network.nodes)*len(self.firewall_rule_list))
+        outgoing_firewall_list = [0]*(len(self.cyber_env.environment.network.nodes)*len(self.firewall_rule_list))
+        all_services_list = [0]*self.num_services
+        count_incoming_firewall = -1
+        count_outgoing_firewall = -1
+        count_services = -1
 
-        # Stable baselines does not like numpy wrapped ints
-        for space in self.int32_spaces:
-            observation[space] = int(observation[space])
+        # Iterates through all nodes in the environment.
+        for _, node in model.iterate_network_nodes(self.cyber_env.environment.network):
+            # Incoming Firewall rules section. Counts which incoming firewall rules are active.
+            for rule in self.firewall_rule_list:
+                count_incoming_firewall+=1
+                for entry in node.firewall.incoming:
+                    if rule == entry.port:
+                        incoming_firewall_list[count_incoming_firewall] = 1
 
-        # TODO: Reformat these spaces so they don't have to be removed
-        # Remove nested Tuple/Dict spaces
-        for space in self.nested_spaces + self.other_removed_spaces:
-            del observation[space]
-
-        return observation
+            # Outgoing Firewall rules section. Counts which outgoing firewall rules are active.
+            for rule in self.firewall_rule_list:
+                count_outgoing_firewall+=1
+                for entry in node.firewall.outgoing:
+                    if rule == entry.port:
+                        outgoing_firewall_list[count_outgoing_firewall] = 1
+                    
+            # Services Section. Counts the currently running services.
+            for service in node.services:
+                count_services+=1
+                if service.running:
+                    all_services_list[count_services] = 1
+                    
+        # Take information from the environment and format it for defender agent observation.
+        # Check all nodes and find which are infected. 1 if infected 0 if not.
+        new_observation["infected_nodes"] = np.array([1 if node.agent_installed else 0 for _, node in model.iterate_network_nodes(self.cyber_env.environment.network)])
+        # Lists all possible incoming firewall rules, 1 if active, 0 if not.
+        new_observation['incoming_firewall_status'] = np.array(incoming_firewall_list)
+        # Lists all possible outgoing firewall rules, 1 if active, 0 if not.
+        new_observation['outgoing_firewall_status'] = np.array(outgoing_firewall_list)
+        # Lists all possible services, 1 if active, 0 if not.
+        new_observation['services_status'] = np.array(all_services_list)
+        return new_observation
 
     def close(self) -> None:
         return self.cyber_env.close()
