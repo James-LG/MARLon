@@ -7,6 +7,7 @@ from stable_baselines3.common.monitor import Monitor
 from cyberbattle._env.cyberbattle_env import DefenderConstraint
 
 from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
+from marlon.baseline_models.multiagent.marlon_agent import BaselineMarlonAgent
 from marlon.defender_agents.defender import PrototypeLearningDefender
 from marlon.baseline_models.env_wrappers.defend_wrapper import DefenderEnvWrapper
 from marlon.baseline_models.multiagent.marl_algorithm import learn
@@ -29,17 +30,20 @@ def train(evaluate_after=False):
 
     defender_wrapper = DefenderEnvWrapper(
         env,
-        attacker_reward_store=AttackerEnvWrapper(env),
+        attacker_reward_store=attacker_wrapper,
         max_timesteps=ENV_MAX_TIMESTEPS,
         enable_action_penalty=ENABLE_ACTION_PENALTY)
 
-    attacker = PPO('MultiInputPolicy', Monitor(attacker_wrapper), verbose=1)
-    defender = PPO('MultiInputPolicy', Monitor(defender_wrapper), verbose=1)
+    attacker_model = PPO('MultiInputPolicy', Monitor(attacker_wrapper), verbose=1)
+    defender_model = PPO('MultiInputPolicy', Monitor(defender_wrapper), verbose=1)
 
-    learn(attacker, defender, total_timesteps=LEARN_TIMESTEPS, n_eval_episodes=LEARN_EPISODES)
+    attacker_agent = BaselineMarlonAgent(attacker_model)
+    defender_agent = BaselineMarlonAgent(defender_model)
 
-    attacker.save('ppo_attacker.zip')
-    defender.save('ppo_defender.zip')
+    learn(attacker_agent, defender_agent, total_timesteps=LEARN_TIMESTEPS, n_eval_episodes=LEARN_EPISODES)
+
+    attacker_model.save('ppo_attacker.zip')
+    defender_model.save('ppo_defender.zip')
 
     # if evaluate_after:
     #     evaluate(max_timesteps=ENV_MAX_TIMESTEPS)

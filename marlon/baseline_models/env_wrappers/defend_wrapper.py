@@ -104,13 +104,17 @@ class DefenderEnvWrapper(gym.Env):
         
         # Take the reward gained this step from the attacker's step and invert it so the defender 
         # loses more reward if the attacker succeeds.
-        reward = -1*self.attacker_reward_store.get_episode_rewards()[-1]
+        if self.attacker_reward_store.episode_rewards:
+            reward = -1*self.attacker_reward_store.episode_rewards[-1]
+        else:
+            reward = 0
 
         # Generate the new defender observation based on the defender's action
         defender_observation = self.observe()
         self.timesteps += 1
-        if self.timesteps > self.max_timesteps:
-            done = True
+
+        done = self.timesteps > self.max_timesteps
+
         self.rewards.append(reward)
         return defender_observation, reward, done, {}
 
@@ -202,6 +206,7 @@ class DefenderEnvWrapper(gym.Env):
             return False
 
     def reset(self) -> Observation:
+        print('Reset Defender')
         self.valid_action_count = 0
         self.invalid_action_count = 0
         self.cyber_env.reset()

@@ -191,6 +191,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore):
         return transformed_observation, reward, done, info
 
     def reset(self) -> Observation:
+        print('Reset Attacker')
         self.valid_action_count = 0
         self.invalid_action_count = 0
         self.timesteps = 0
@@ -281,5 +282,6 @@ class AttackerEnvWrapper(gym.Env, IRewardStore):
         fig.update_layout(layout)
         return fig
 
-    def get_episode_rewards(self) -> List[float]:
+    @property
+    def episode_rewards(self) -> List[float]:
         return self.cyber_rewards
