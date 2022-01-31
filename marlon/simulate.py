@@ -17,9 +17,9 @@ class SimulationCache:
 def generate_graph_json(cyberbattle_env: CyberBattleEnv, iteration, current_score):
     fig = cyberbattle_env.render_as_fig()
 
-    graph_json = json.dumps((fig, iteration, current_score), cls=plotly.utils.PlotlyJSONEncoder)
+    #graph_json = json.dumps((fig, iteration, current_score), cls=plotly.utils.PlotlyJSONEncoder)
 
-    return graph_json
+    return fig, iteration, current_score
 
 def run_simulation(iteration_count, agent_file):
     if agent_file.endswith('.zip'):
