@@ -1,22 +1,24 @@
-from typing import Any, Dict, List, Tuple
-from gym.spaces.space import Space
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-
-import gym
-from cyberbattle._env.cyberbattle_env import Action, CyberBattleEnv, EnvironmentBounds, Observation
-from cyberbattle.simulation import commandcontrol, model
-from gym import spaces
 
 from plotly.missing_ipywidgets import FigureWidget
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+import gym
+from gym import spaces
+from gym.spaces.space import Space
+
+from cyberbattle._env.cyberbattle_env import Action, CyberBattleEnv, EnvironmentBounds, Observation
+from cyberbattle.simulation import commandcontrol, model
+
+from marlon.baseline_models.env_wrappers.wrapper_coordinator import ICyberBattleEnvObserver, WrapperCoordinator
 from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
 
 INVALID_ACTION_PENALTY = -1
 
-class AttackerEnvWrapper(gym.Env, IRewardStore):
+class AttackerEnvWrapper(gym.Env, IRewardStore, ICyberBattleEnvObserver):
     '''
     Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to attack.
     '''
@@ -25,7 +27,12 @@ class AttackerEnvWrapper(gym.Env, IRewardStore):
     other_removed_spaces = ['connect']
     int32_spaces = ['customer_data_found', 'escalation', 'lateral_move', 'newly_discovered_nodes_count', 'probe_result']
 
-    def __init__(self, cyber_env: CyberBattleEnv, max_timesteps=2000, enable_action_penalty=True):
+    def __init__(self,
+        cyber_env: CyberBattleEnv,
+        wrapper_coordinator: Optional[WrapperCoordinator] = None,
+        max_timesteps=2000,
+        enable_action_penalty=True):
+
         super().__init__()
         self.cyber_env: CyberBattleEnv = cyber_env
         self.bounds: EnvironmentBounds = self.cyber_env._bounds
@@ -45,6 +52,13 @@ class AttackerEnvWrapper(gym.Env, IRewardStore):
 
         self.valid_action_count = 0
         self.invalid_action_count = 0
+
+        # Add this object as an observer of the cyber env.
+        if wrapper_coordinator is None:
+            wrapper_coordinator = WrapperCoordinator()
+
+        self.wrapper_coordinator = wrapper_coordinator
+        wrapper_coordinator.add_observer(self)
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         observation_space = cyber_env.observation_space.__dict__['spaces'].copy()
@@ -192,12 +206,16 @@ class AttackerEnvWrapper(gym.Env, IRewardStore):
 
     def reset(self) -> Observation:
         print('Reset Attacker')
+        observation = self.cyber_env.reset()
+        self.wrapper_coordinator.notify_reset()
+        return self.transform_observation(observation)
+
+    def on_reset(self):
+        print('on_reset Attacker')
         self.valid_action_count = 0
         self.invalid_action_count = 0
         self.timesteps = 0
         self.cyber_rewards = []
-        observation = self.cyber_env.reset()
-        return self.transform_observation(observation)
 
     def transform_observation(self, observation) -> Observation:
         # Flatten the action_mask field

@@ -7,6 +7,7 @@ from stable_baselines3.common.monitor import Monitor
 from cyberbattle._env.cyberbattle_env import DefenderConstraint
 
 from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
+from marlon.baseline_models.env_wrappers.wrapper_coordinator import WrapperCoordinator
 from marlon.baseline_models.multiagent.marlon_agent import BaselineMarlonAgent
 from marlon.defender_agents.defender import PrototypeLearningDefender
 from marlon.baseline_models.env_wrappers.defend_wrapper import DefenderEnvWrapper
@@ -23,14 +24,17 @@ def train(evaluate_after=False):
         defender_constraint=DefenderConstraint(maintain_sla=0.80),
         defender_agent=PrototypeLearningDefender())
 
+    wrapper_coordinator = WrapperCoordinator()
     attacker_wrapper = AttackerEnvWrapper(
         env,
+        wrapper_coordinator=wrapper_coordinator,
         max_timesteps=ENV_MAX_TIMESTEPS,
         enable_action_penalty=ENABLE_ACTION_PENALTY)
 
     defender_wrapper = DefenderEnvWrapper(
         env,
         attacker_reward_store=attacker_wrapper,
+        wrapper_coordinator=wrapper_coordinator,
         max_timesteps=ENV_MAX_TIMESTEPS,
         enable_action_penalty=ENABLE_ACTION_PENALTY)
 
