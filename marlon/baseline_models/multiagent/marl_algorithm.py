@@ -1,8 +1,8 @@
 from typing import Optional
 
-from stable_baselines3.common.callbacks import BaseCallback
-from stable_baselines3.common.type_aliases import MaybeCallback, GymEnv
+import numpy as np
 
+from stable_baselines3.common.type_aliases import GymEnv
 
 from marlon.baseline_models.multiagent.marlon_agent import MarlonAgent
 
@@ -92,3 +92,47 @@ def learn(
 
     attacker_agent.on_training_end()
     defender_agent.on_training_end()
+
+def run_episode(
+    attacker_agent: MarlonAgent,
+    defender_agent: Optional[MarlonAgent],
+    max_steps: int
+):
+    """
+    Runs an episode with two agents until max_steps is reached or the
+    environment's done flag is set.
+    """
+    obs1 = attacker_agent.env.reset()
+
+    if defender_agent:
+        obs2 = defender_agent.env.reset()
+
+    attacker_rewards = []
+    defender_rewards = []
+
+    n_steps = 0
+    while n_steps < max_steps:
+        action1 = attacker_agent.predict(observation=obs1)
+        obs1, rewards1, dones1, _ = attacker_agent.env.step(action1)
+        if isinstance(rewards1, np.ndarray):
+            rewards1 = rewards1[0]
+
+        attacker_rewards.append(rewards1)
+
+        if dones1:
+            break
+
+        if defender_agent:
+            action2 = defender_agent.predict(observation=obs2)
+            obs2, rewards2, dones2, _ = defender_agent.env.step(action2)
+            if isinstance(rewards2, np.ndarray):
+                rewards2 = rewards2[0]
+            
+            defender_rewards.append(rewards2)
+
+            if dones2:
+                break
+
+        n_steps += 1
+
+    return attacker_rewards, defender_rewards

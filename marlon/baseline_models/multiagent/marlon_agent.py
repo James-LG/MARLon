@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Tuple
 
-from stable_baselines3.common.type_aliases import MaybeCallback, GymEnv
-from stable_baselines3.common.callbacks import BaseCallback
+import numpy as np
+
+from stable_baselines3.common.type_aliases import GymEnv
+
 
 class MarlonAgent(ABC):
     @property
@@ -26,6 +28,10 @@ class MarlonAgent(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def predict(self, observation: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+    @abstractmethod
     def perform_step(self, n_steps: int) -> Tuple[bool, Any, Any]:
         raise NotImplementedError
 
@@ -35,6 +41,14 @@ class MarlonAgent(ABC):
 
     @abstractmethod
     def train(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def learn(self, total_timesteps: int, n_eval_episodes: int):
+        """
+        Use only for single-agent learning.
+        For multi-agent learning you must use marl_algorithm functions.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -62,4 +76,8 @@ class MarlonAgent(ABC):
 
     @abstractmethod
     def on_training_end(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def save(self, filepath: str):
         raise NotImplementedError

@@ -7,7 +7,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
 
 from marlon.baseline_models.env_wrappers.defend_wrapper import DefenderEnvWrapper
-from marlon.baseline_models.env_wrappers.wrapper_coordinator import WrapperCoordinator
+from marlon.baseline_models.env_wrappers.environment_event_source import EnvironmentEventSource
 from marlon.defender_agents.defender import PrototypeLearningDefender
 
 def evaluate(max_timesteps):
@@ -16,10 +16,10 @@ def evaluate(max_timesteps):
         env_id,
         defender_agent=PrototypeLearningDefender())
 
-    wrapper_coordinator = WrapperCoordinator()
+    wrapper_coordinator = EnvironmentEventSource()
     attacker_wrapper = AttackerEnvWrapper(
         cyber_env=cyber_env,
-        wrapper_coordinator=wrapper_coordinator,
+        event_source=wrapper_coordinator,
         max_timesteps=max_timesteps,
         enable_action_penalty=False
     )
@@ -27,7 +27,7 @@ def evaluate(max_timesteps):
     defender_wrapper = DefenderEnvWrapper(
         cyber_env=cyber_env,
         attacker_reward_store=attacker_wrapper,
-        wrapper_coordinator=wrapper_coordinator,
+        event_source=wrapper_coordinator,
         max_timesteps=max_timesteps,
         enable_action_penalty=False
     )

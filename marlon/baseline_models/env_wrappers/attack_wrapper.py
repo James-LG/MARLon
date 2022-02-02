@@ -13,12 +13,12 @@ from gym.spaces.space import Space
 from cyberbattle._env.cyberbattle_env import Action, CyberBattleEnv, EnvironmentBounds, Observation
 from cyberbattle.simulation import commandcontrol, model
 
-from marlon.baseline_models.env_wrappers.wrapper_coordinator import ICyberBattleEnvObserver, WrapperCoordinator
+from marlon.baseline_models.env_wrappers.environment_event_source import IEnvironmentObserver, EnvironmentEventSource
 from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
 
 INVALID_ACTION_PENALTY = -1
 
-class AttackerEnvWrapper(gym.Env, IRewardStore, ICyberBattleEnvObserver):
+class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
     '''
     Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to attack.
     '''
@@ -29,7 +29,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, ICyberBattleEnvObserver):
 
     def __init__(self,
         cyber_env: CyberBattleEnv,
-        wrapper_coordinator: Optional[WrapperCoordinator] = None,
+        event_source: Optional[EnvironmentEventSource] = None,
         max_timesteps=2000,
         enable_action_penalty=True):
 
@@ -54,11 +54,11 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, ICyberBattleEnvObserver):
         self.invalid_action_count = 0
 
         # Add this object as an observer of the cyber env.
-        if wrapper_coordinator is None:
-            wrapper_coordinator = WrapperCoordinator()
+        if event_source is None:
+            event_source = EnvironmentEventSource()
 
-        self.wrapper_coordinator = wrapper_coordinator
-        wrapper_coordinator.add_observer(self)
+        self.event_source = event_source
+        event_source.add_observer(self)
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         observation_space = cyber_env.observation_space.__dict__['spaces'].copy()
@@ -207,7 +207,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, ICyberBattleEnvObserver):
     def reset(self) -> Observation:
         print('Reset Attacker')
         observation = self.cyber_env.reset()
-        self.wrapper_coordinator.notify_reset()
+        self.event_source.notify_reset()
         return self.transform_observation(observation)
 
     def on_reset(self):

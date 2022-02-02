@@ -1,5 +1,5 @@
 import time
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, Type
 
 import numpy as np
 import torch as th
@@ -8,11 +8,26 @@ import gym
 
 from stable_baselines3.common.utils import safe_mean, obs_as_tensor
 from stable_baselines3.common.buffers import RolloutBuffer
-from stable_baselines3.common.type_aliases import MaybeCallback, GymEnv
+from stable_baselines3.common.type_aliases import GymEnv
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.monitor import Monitor
 
+from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
+from marlon.baseline_models.env_wrappers.environment_event_source import EnvironmentEventSource
 from marlon.baseline_models.multiagent.marlon_agent import MarlonAgent
+from marlon.baseline_models.multiagent.multiagent_universe import AgentBuilder
+
+class BaselineAgentBuilder(AgentBuilder):
+    def __init__(self, alg_type: Type, policy: str):
+        assert issubclass(alg_type, OnPolicyAlgorithm), "Algorithm type must inherit OnPolicyAlgorithm."
+        
+        self.alg_type = alg_type
+        self.policy = policy
+
+    def build(self, wrapper: GymEnv) -> MarlonAgent:
+        model = self.alg_type(self.policy, Monitor(wrapper), verbose=1)
+        return BaselineMarlonAgent(model)
 
 class BaselineMarlonAgent(MarlonAgent):
     def __init__(self, baseline_model: OnPolicyAlgorithm):
@@ -39,6 +54,10 @@ class BaselineMarlonAgent(MarlonAgent):
     @property
     def n_rollout_steps(self) -> int:
         return self.baseline_model.n_steps
+
+    def predict(self, observation: np.ndarray) -> np.ndarray:
+        action, _ = self.baseline_model.predict(observation=observation)
+        return action
 
     def perform_step(self, n_steps: int) -> Tuple[bool, Any, Any]:
         if self.baseline_model.use_sde and self.baseline_model.sde_sample_freq > 0 and n_steps % self.baseline_model.sde_sample_freq == 0:
@@ -92,6 +111,12 @@ class BaselineMarlonAgent(MarlonAgent):
 
     def train(self):
         self.baseline_model.train()
+
+    def learn(self, total_timesteps: int, n_eval_episodes: int):
+        self.baseline_model.learn(
+            total_timesteps=total_timesteps,
+            n_eval_episodes=n_eval_episodes
+        )
 
     def setup_learn(self,
         total_timesteps: int,
@@ -147,3 +172,6 @@ class BaselineMarlonAgent(MarlonAgent):
 
     def on_training_end(self):
         self.callback.on_training_end()
+
+    def save(self, filepath: str):
+        self.baseline_model.save(filepath)

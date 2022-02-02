@@ -14,7 +14,7 @@ from cyberbattle.simulation import model
 from cyberbattle._env.cyberbattle_env import CyberBattleEnv, EnvironmentBounds, Observation
 from cyberbattle.simulation import model
 
-from marlon.baseline_models.env_wrappers.wrapper_coordinator import ICyberBattleEnvObserver, WrapperCoordinator
+from marlon.baseline_models.env_wrappers.environment_event_source import IEnvironmentObserver, EnvironmentEventSource
 from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
 
 
@@ -22,7 +22,7 @@ Defender_Observation = TypedDict('Defender_Observation', {'infected_nodes': np.n
                                                           'incoming_firewall_status':np.ndarray,
                                                           'outgoing_firewall_status':np.ndarray,
                                                           'services_status':np.ndarray})
-class DefenderEnvWrapper(gym.Env, ICyberBattleEnvObserver):
+class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
     '''
     Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to defend.
     '''
@@ -35,7 +35,7 @@ class DefenderEnvWrapper(gym.Env, ICyberBattleEnvObserver):
     def __init__(self,
         cyber_env: CyberBattleEnv,
         attacker_reward_store: IRewardStore,
-        wrapper_coordinator: Optional[WrapperCoordinator] = None,
+        event_source: Optional[EnvironmentEventSource] = None,
         max_timesteps=100,
         enable_action_penalty=True):
         super().__init__()
@@ -53,11 +53,11 @@ class DefenderEnvWrapper(gym.Env, ICyberBattleEnvObserver):
         self.attacker_reward_store = attacker_reward_store
 
         # Add this object as an observer of the cyber env.
-        if wrapper_coordinator is None:
-            wrapper_coordinator = WrapperCoordinator()
+        if event_source is None:
+            event_source = EnvironmentEventSource()
 
-        self.wrapper_coordinator = wrapper_coordinator
-        wrapper_coordinator.add_observer(self)
+        self.event_source = event_source
+        event_source.add_observer(self)
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         """Creates a compatible version of the attackers observation space."""
@@ -219,7 +219,7 @@ class DefenderEnvWrapper(gym.Env, ICyberBattleEnvObserver):
     def reset(self) -> Observation:
         print('Reset Defender')
         self.cyber_env.reset()
-        self.wrapper_coordinator.notify_reset()
+        self.event_source.notify_reset()
         return self.observe()
 
     def on_reset(self):
