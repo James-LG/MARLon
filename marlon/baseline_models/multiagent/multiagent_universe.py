@@ -5,9 +5,8 @@ import numpy as np
 import gym
 
 from stable_baselines3.common.type_aliases import GymEnv
-from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 
-from cyberbattle._env.cyberbattle_env import CyberBattleEnv, DefenderConstraint
+from cyberbattle._env.cyberbattle_env import DefenderConstraint
 from marlon.baseline_models.env_wrappers.environment_event_source import EnvironmentEventSource
 
 from marlon.defender_agents.defender import PrototypeLearningDefender
@@ -16,25 +15,6 @@ from marlon.baseline_models.env_wrappers.defend_wrapper import DefenderEnvWrappe
 from marlon.baseline_models.multiagent.marlon_agent import MarlonAgent
 from marlon.baseline_models.multiagent import marl_algorithm
 
-# class WrapperBuilder(ABC):
-#     @abstractmethod
-#     def build(self,
-#         cyber_env: GymEnv,
-#         event_source: EnvironmentEventSource,
-#         max_timesteps: int):
-
-#         raise NotImplementedError
-
-# class AttackWrapperBuilder(WrapperBuilder):
-#     def __init__(self, enable_action_penalty: bool) -> None:
-#         self.enable_action_penalty = enable_action_penalty
-
-#     def build(self, cyber_env: GymEnv, event_source: EnvironmentEventSource, max_timesteps: int):
-#         return AttackerEnvWrapper(
-#             cyber_env=cyber_env,
-#             event_source=event_source,
-
-#         )
 
 class AgentBuilder(ABC):
     @abstractmethod
@@ -90,7 +70,7 @@ class MultiAgentUniverse:
         attacker_agent: MarlonAgent,
         defender_agent: Optional[MarlonAgent],
         max_timesteps: int):
-        
+
         self.attacker_agent = attacker_agent
         self.defender_agent = defender_agent
         self.max_timesteps = max_timesteps
@@ -151,7 +131,7 @@ class MultiAgentUniverse:
     def save(self,
         attacker_filepath: Optional[str] = None,
         defender_filepath: Optional[str] = None):
-        
+
         if attacker_filepath is not None:
             self.attacker_agent.save(attacker_filepath)
 

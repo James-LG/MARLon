@@ -1,18 +1,7 @@
-import gym
-
-import cyberbattle
 from stable_baselines3 import PPO
-from stable_baselines3.common.monitor import Monitor
 
-from cyberbattle._env.cyberbattle_env import DefenderConstraint
-
-from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
-from marlon.baseline_models.env_wrappers.environment_event_source import EnvironmentEventSource
-from marlon.baseline_models.multiagent.baseline_marlon_agent import BaselineAgentBuilder, BaselineMarlonAgent
+from marlon.baseline_models.multiagent.baseline_marlon_agent import BaselineAgentBuilder
 from marlon.baseline_models.multiagent.multiagent_universe import MultiAgentUniverse
-from marlon.defender_agents.defender import PrototypeLearningDefender
-from marlon.baseline_models.env_wrappers.defend_wrapper import DefenderEnvWrapper
-from marlon.baseline_models.multiagent.marl_algorithm import learn
 
 ENV_MAX_TIMESTEPS = 2000
 LEARN_TIMESTEPS = 10_000

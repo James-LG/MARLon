@@ -12,10 +12,9 @@ class RandomAgentBuilder(AgentBuilder):
     def __init__(self,
         num_timesteps: int = 2048,
         n_rollout_steps: int = 2048) -> None:
-        
+
         self.num_timesteps = num_timesteps
         self.n_rollout_steps = n_rollout_steps
-        
 
     def build(self, wrapper: GymEnv) -> MarlonAgent:
         return RandomMarlonAgent(

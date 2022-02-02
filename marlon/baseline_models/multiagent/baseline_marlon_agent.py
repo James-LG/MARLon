@@ -13,15 +13,13 @@ from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
 
-from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
-from marlon.baseline_models.env_wrappers.environment_event_source import EnvironmentEventSource
 from marlon.baseline_models.multiagent.marlon_agent import MarlonAgent
 from marlon.baseline_models.multiagent.multiagent_universe import AgentBuilder
 
 class BaselineAgentBuilder(AgentBuilder):
     def __init__(self, alg_type: Type, policy: str):
         assert issubclass(alg_type, OnPolicyAlgorithm), "Algorithm type must inherit OnPolicyAlgorithm."
-        
+
         self.alg_type = alg_type
         self.policy = policy
 
@@ -60,53 +58,95 @@ class BaselineMarlonAgent(MarlonAgent):
         return action
 
     def perform_step(self, n_steps: int) -> Tuple[bool, Any, Any]:
-        if self.baseline_model.use_sde and self.baseline_model.sde_sample_freq > 0 and n_steps % self.baseline_model.sde_sample_freq == 0:
+        if self.baseline_model.use_sde and self.baseline_model.sde_sample_freq > 0 and \
+            n_steps % self.baseline_model.sde_sample_freq == 0:
+
             # Sample a new noise matrix
             self.baseline_model.policy.reset_noise(self.env.num_envs)
 
         with th.no_grad():
             # Convert to pytorch tensor or to TensorDict
             obs_tensor = obs_as_tensor(self.baseline_model._last_obs, self.baseline_model.device)
-            actions1, values1, log_probs1 = self.baseline_model.policy.forward(obs_tensor)
+            actions, values, log_probs = self.baseline_model.policy.forward(obs_tensor)
 
-        actions1 = actions1.cpu().numpy()
+        actions = actions.cpu().numpy()
 
         # Rescale and perform action
-        clipped_actions1 = actions1
+        clipped_actions = actions
         # Clip the actions to avoid out of bound error
         if isinstance(self.baseline_model.action_space, gym.spaces.Box):
-            clipped_actions1 = np.clip(actions1, self.baseline_model.action_space.low, self.baseline_model.action_space.high)
+            clipped_actions = np.clip(
+                actions,
+                self.baseline_model.action_space.low,
+                self.baseline_model.action_space.high
+            )
 
-        new_obs1, rewards1, dones1, infos1 = self.env.step(clipped_actions1)
+        new_obs, rewards, dones, infos = self.env.step(clipped_actions)
 
         self.num_timesteps += self.env.num_envs
 
         # Give access to local variables
         self.callback.update_locals(locals())
         if self.callback.on_step() is False:
-            return False, new_obs1, dones1
+            return False, new_obs, dones
 
-        self.baseline_model._update_info_buffer(infos1)
+        self.baseline_model._update_info_buffer(infos)
 
         if isinstance(self.baseline_model.action_space, gym.spaces.Discrete):
             # Reshape in case of discrete action
-            actions1 = actions1.reshape(-1, 1)
+            actions = actions.reshape(-1, 1)
 
-        self.rollout_buffer.add(self.baseline_model._last_obs, actions1, rewards1, self.baseline_model._last_episode_starts, values1, log_probs1)
-        self.baseline_model._last_obs = new_obs1
-        self.baseline_model._last_episode_starts = dones1
+        self.rollout_buffer.add(
+            self.baseline_model._last_obs,
+            actions,
+            rewards,
+            self.baseline_model._last_episode_starts,
+            values,
+            log_probs
+        )
 
-        return True, new_obs1, dones1
+        self.baseline_model._last_obs = new_obs
+        self.baseline_model._last_episode_starts = dones
+
+        return True, new_obs, dones
 
     def log_training(self, iteration: int):
-        fps = int(self.baseline_model.num_timesteps / (time.time() - self.baseline_model.start_time))
-        self.baseline_model.logger.record("time/iterations", iteration, exclude="tensorboard")
-        if len(self.baseline_model.ep_info_buffer) > 0 and len(self.baseline_model.ep_info_buffer[0]) > 0:
-            self.baseline_model.logger.record("rollout/ep_rew_mean", safe_mean([ep_info["r"] for ep_info in self.baseline_model.ep_info_buffer]))
-            self.baseline_model.logger.record("rollout/ep_len_mean", safe_mean([ep_info["l"] for ep_info in self.baseline_model.ep_info_buffer]))
-        self.baseline_model.logger.record("time/fps", fps)
-        self.baseline_model.logger.record("time/time_elapsed", int(time.time() - self.baseline_model.start_time), exclude="tensorboard")
-        self.baseline_model.logger.record("time/total_timesteps", self.baseline_model.num_timesteps, exclude="tensorboard")
+        training_duration = time.time() - self.baseline_model.start_time
+        fps = int(self.baseline_model.num_timesteps / training_duration)
+
+        self.baseline_model.logger.record(
+            "time/iterations",
+            iteration,
+            exclude="tensorboard"
+        )
+
+        if len(self.baseline_model.ep_info_buffer) > 0 and \
+            len(self.baseline_model.ep_info_buffer[0]) > 0:
+
+            self.baseline_model.logger.record(
+                "rollout/ep_rew_mean",
+                safe_mean([ep_info["r"] for ep_info in self.baseline_model.ep_info_buffer])
+            )
+            self.baseline_model.logger.record(
+                "rollout/ep_len_mean",
+                safe_mean([ep_info["l"] for ep_info in self.baseline_model.ep_info_buffer])
+            )
+
+        self.baseline_model.logger.record(
+            "time/fps",
+            fps
+        )
+        self.baseline_model.logger.record(
+            "time/time_elapsed",
+            int(training_duration),
+            exclude="tensorboard"
+        )
+        self.baseline_model.logger.record(
+            "time/total_timesteps",
+            self.baseline_model.num_timesteps,
+            exclude="tensorboard"
+        )
+
         self.baseline_model.logger.dump(step=self.baseline_model.num_timesteps)
 
     def train(self):
@@ -144,7 +184,10 @@ class BaselineMarlonAgent(MarlonAgent):
         return total_timesteps
 
     def update_progress(self, total_timesteps: int):
-        return self.baseline_model._update_current_progress_remaining(self.num_timesteps, total_timesteps)
+        return self.baseline_model._update_current_progress_remaining(
+            self.num_timesteps,
+            total_timesteps
+        )
 
     def on_rollout_start(self):
         assert self.baseline_model._last_obs is not None, "No previous observation was provided"

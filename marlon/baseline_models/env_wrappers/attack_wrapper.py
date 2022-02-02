@@ -60,6 +60,8 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         self.event_source = event_source
         event_source.add_observer(self)
 
+        self.__done = False
+
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         observation_space = cyber_env.observation_space.__dict__['spaces'].copy()
 
@@ -89,7 +91,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
 
         # This is incorrectly set to spaces.MultiDiscrete(model.PrivilegeLevel.MAXIMUM + 1), when it is only one value
         observation_space['escalation'] = spaces.Discrete(model.PrivilegeLevel.MAXIMUM + 1)
-        
+
         return spaces.Dict(observation_space)
 
     def __create_action_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
@@ -148,7 +150,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         if not self.cyber_env.is_action_valid(translated_action):
             # If it is not valid, we will try picking a random valid node and hoping
             # that makes the action valid.
-            
+
             # Pick source node at random (owned and with the desired feature encoding)
             potential_source_nodes = [
                 from_node
@@ -196,7 +198,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         transformed_observation = self.transform_observation(observation)
 
         self.timesteps += 1
-        if self.timesteps > self.max_timesteps:
+        if self.__done or self.timesteps > self.max_timesteps:
             done = True
 
         reward += reward_modifier
@@ -206,16 +208,22 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
 
     def reset(self) -> Observation:
         print('Reset Attacker')
-        observation = self.cyber_env.reset()
-        self.event_source.notify_reset()
-        return self.transform_observation(observation)
+        if not self.__done:
+            self.event_source.notify_reset()
 
-    def on_reset(self):
-        print('on_reset Attacker')
+        observation = self.cyber_env.reset()
+
+        self.__done = False
         self.valid_action_count = 0
         self.invalid_action_count = 0
         self.timesteps = 0
         self.cyber_rewards = []
+
+        return self.transform_observation(observation)
+
+    def on_reset(self):
+        print('on_reset Attacker')
+        self.__done = True
 
     def transform_observation(self, observation) -> Observation:
         # Flatten the action_mask field

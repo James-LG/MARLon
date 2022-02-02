@@ -12,7 +12,6 @@ from gym.spaces.space import Space
 
 from cyberbattle.simulation import model
 from cyberbattle._env.cyberbattle_env import CyberBattleEnv, EnvironmentBounds, Observation
-from cyberbattle.simulation import model
 
 from marlon.baseline_models.env_wrappers.environment_event_source import IEnvironmentObserver, EnvironmentEventSource
 from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
@@ -58,6 +57,8 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
 
         self.event_source = event_source
         event_source.add_observer(self)
+
+        self.__done = False
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         """Creates a compatible version of the attackers observation space."""
@@ -124,7 +125,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         defender_observation = self.observe()
         self.timesteps += 1
 
-        done = self.timesteps > self.max_timesteps
+        done = self.__done or self.timesteps > self.max_timesteps
 
         self.rewards.append(reward)
         return defender_observation, reward, done, {}
@@ -218,19 +219,25 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
 
     def reset(self) -> Observation:
         print('Reset Defender')
-        self.cyber_env.reset()
-        self.event_source.notify_reset()
-        return self.observe()
+        if not self.__done:
+            self.event_source.notify_reset()
 
-    def on_reset(self):
-        print('on_reset Defender')
+        self.cyber_env.reset()
+
+        self.__done = False
         self.rewards = []
         self.timesteps = 0
         self.valid_action_count = 0
         self.invalid_action_count = 0
 
+        return self.observe()
+
+    def on_reset(self):
+        print('on_reset Defender')
+        self.__done = True
+
     def get_blank_defender_observation(self):
-        """Creates a empty defender observation."""
+        """ Creates a empty defender observation. """
         obs = Defender_Observation(infected_nodes = [],
                                     incoming_firewall_status=[],
                                     outgoing_firewall_status=[],

@@ -68,7 +68,8 @@ def learn(
         eval_log_path, reset_num_timesteps, tb_log_name
     )
 
-    while attacker_agent.num_timesteps < total_timesteps1 and defender_agent.num_timesteps < total_timesteps2:
+    while attacker_agent.num_timesteps < total_timesteps1 and \
+        defender_agent.num_timesteps < total_timesteps2:
 
         continue_training = collect_rollouts(
             attacker_agent=attacker_agent,
@@ -127,7 +128,7 @@ def run_episode(
             obs2, rewards2, dones2, _ = defender_agent.env.step(action2)
             if isinstance(rewards2, np.ndarray):
                 rewards2 = rewards2[0]
-            
+
             defender_rewards.append(rewards2)
 
             if dones2:

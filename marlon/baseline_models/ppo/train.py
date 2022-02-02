@@ -1,14 +1,7 @@
-import gym
-
-import cyberbattle
 from stable_baselines3 import PPO
-from stable_baselines3.common.env_checker import check_env
-from stable_baselines3.common.monitor import Monitor
 
-from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
 from marlon.baseline_models.multiagent.baseline_marlon_agent import BaselineAgentBuilder
 from marlon.baseline_models.multiagent.multiagent_universe import MultiAgentUniverse
-from marlon.baseline_models.ppo.eval import evaluate
 
 ENV_MAX_TIMESTEPS = 2000
 LEARN_TIMESTEPS = 10_000
