@@ -1,3 +1,4 @@
+from asyncio.log import logger
 from typing import Any, Dict, Optional, Tuple, TypedDict
 import boolean
 import logging
@@ -15,6 +16,8 @@ from cyberbattle._env.cyberbattle_env import CyberBattleEnv, EnvironmentBounds, 
 
 from marlon.baseline_models.env_wrappers.environment_event_source import IEnvironmentObserver, EnvironmentEventSource
 from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
+from marlon.defender_agents import defender
+from marlon.defender_agents.defender import LearningDefender
 
 
 Defender_Observation = TypedDict('Defender_Observation', {'infected_nodes': np.ndarray,
@@ -35,15 +38,17 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         cyber_env: CyberBattleEnv,
         attacker_reward_store: IRewardStore,
         event_source: Optional[EnvironmentEventSource] = None,
+        defender: bool = False,
         max_timesteps=100,
         enable_action_penalty=True):
         super().__init__()
+        self.defender = None
         self.cyber_env: CyberBattleEnv = cyber_env
         self.bounds: EnvironmentBounds = self.cyber_env._bounds
         self.num_services = 0
         self.observation_space: Space = self.__create_observation_space(cyber_env)
         self.action_space: Space = self.__create_defender_action_space(cyber_env)
-        self.__get_privilegelevel_array = cyber_env._CyberBattleEnv__get_privilegelevel_array
+        self.network_availability: float = 1.0
         self.valid_action_count = 0
         self.invalid_action_count = 0
         self.max_timesteps = max_timesteps
@@ -57,14 +62,14 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
 
         self.event_source = event_source
         event_source.add_observer(self)
-
+        if defender:
+            self.defender: LearningDefender = LearningDefender(cyber_env)
+        else:
+            logger.error("Attempting to use the defender environment without a defender present.")
         self.__done = False
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         """Creates a compatible version of the attackers observation space."""
-        # TODO Change to defender view.
-        observation_space = cyber_env.observation_space.__dict__['spaces'].copy()
-
         # Calculate how many services there are, this is used to define the maximum number of services active at once.
         for _, node in model.iterate_network_nodes(cyber_env.environment.network):
             for _ in node.services:
@@ -99,11 +104,9 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         logging.info(f"Action space defender = {action_space}")
         return spaces.MultiDiscrete(action_space)
 
-    def __get_owned_nodes(self):
-        return np.nonzero(self.__get_privilegelevel_array())[0]
-
     def step(self, action) -> Tuple[Observation, float, bool, Dict[str, Any]]:
         # Check for action validity
+        print(f"Checking action {action} for validity.")
         if not self.is_defender_action_valid(action):
             logging.warning(f"Action choosen is outside action space. Defender will skip this turn. Action = {action}")
             self.invalid_action_count += 1
@@ -111,9 +114,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
             action = []
         else:
             self.valid_action_count += 1
-        # Tell the defender which action was choosen
-        self.cyber_env._CyberBattleEnv__defender_agent.next_action = action
-        
+        self.defender.executeAction(action)
         # Take the reward gained this step from the attacker's step and invert it so the defender 
         # loses more reward if the attacker succeeds.
         if self.attacker_reward_store.episode_rewards:
@@ -121,6 +122,14 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         else:
             reward = 0
 
+            # USE cyber battle functions instead...
+
+        if self.defender_constraints_broken():
+            reward = -1*self.cyber_env._CyberBattleEnv__WINNING_REWARD
+            done = True
+        if self.defender_goal_reached():
+            reward = self.cyber_env._CyberBattleEnv__WINNING_REWARD
+            done = True
         # Generate the new defender observation based on the defender's action
         defender_observation = self.observe()
         self.timesteps += 1
@@ -130,6 +139,8 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         self.rewards.append(reward)
         return defender_observation, reward, done, {}
 
+
+    # Bug with either this function or how the reimage is saving its info, because starting or stopping a service tries to happen on reimaging nodes, and this function doesnt catch it.
     def is_defender_action_valid(self, action) -> boolean:
         """Determines if a given action is valid within the environment."""
         
@@ -147,7 +158,6 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
             """Given a node ID, find the corresponding node info"""
             return self.cyber_env.environment.get_node(node_id)
 
-
         def node_exists(node_id: model.NodeID):
             """Determines if a node exists in the network"""
             return node_id in list(self.cyber_env.environment.network.nodes)
@@ -164,6 +174,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         def is_reimagable(node_info: model.NodeInfo):
             """Checks if a given node is reimagable"""
             return node_info.reimagable
+
         def firewall_rule_exists(node_info: model.NodeInfo, port_from_action: int, incoming :bool):
             """Checks a node to see if a given firewall rule exists on it."""
             firewall_list = []
@@ -287,6 +298,19 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         # Lists all possible services, 1 if active, 0 if not.
         new_observation['services_status'] = np.array(all_services_list)
         return new_observation
+
+    def defender_constraints_broken(self) -> bool:
+        """Check if any of the defender's constraint is not met"""
+        constraint = self.cyber_env._CyberBattleEnv__defender_constraint
+
+        if self.network_availability < constraint.maintain_sla:
+            return True
+        return False
+
+    def defender_goal_reached(self) -> bool:
+        """Check if defender's goal is reached(e.g. full eviction of attacker)"""
+        goal = self.cyber_env._CyberBattleEnv__defender_goal
+        return goal.eviction and not (self.cyber_env._CyberBattleEnv__get__owned_nodes_indices())
 
     def close(self) -> None:
         return self.cyber_env.close()
