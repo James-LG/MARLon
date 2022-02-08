@@ -1,20 +1,24 @@
-from typing import Any, Dict, Tuple
-from gym.spaces.space import Space
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-
-import gym
-from cyberbattle._env.cyberbattle_env import Action, CyberBattleEnv, EnvironmentBounds, Observation
-from cyberbattle.simulation import commandcontrol, model
-from gym import spaces
 
 from plotly.missing_ipywidgets import FigureWidget
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+import gym
+from gym import spaces
+from gym.spaces.space import Space
+
+from cyberbattle._env.cyberbattle_env import Action, CyberBattleEnv, EnvironmentBounds, Observation
+from cyberbattle.simulation import commandcontrol, model
+
+from marlon.baseline_models.env_wrappers.environment_event_source import IEnvironmentObserver, EnvironmentEventSource
+from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
+
 INVALID_ACTION_PENALTY = -1
 
-class AttackerEnvWrapper(gym.Env):
+class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
     '''
     Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to attack.
     '''
@@ -23,7 +27,12 @@ class AttackerEnvWrapper(gym.Env):
     other_removed_spaces = ['connect']
     int32_spaces = ['customer_data_found', 'escalation', 'lateral_move', 'newly_discovered_nodes_count', 'probe_result']
 
-    def __init__(self, cyber_env: CyberBattleEnv, max_timesteps=2000, enable_action_penalty=True):
+    def __init__(self,
+        cyber_env: CyberBattleEnv,
+        event_source: Optional[EnvironmentEventSource] = None,
+        max_timesteps=2000,
+        enable_action_penalty=True):
+
         super().__init__()
         self.cyber_env: CyberBattleEnv = cyber_env
         self.bounds: EnvironmentBounds = self.cyber_env._bounds
@@ -32,7 +41,7 @@ class AttackerEnvWrapper(gym.Env):
 
         # These should be set during reset()
         self.timesteps = None
-        self.rewards = None
+        self.cyber_rewards = None
 
         # Access protected members only in the ctor to avoid pylint warnings.
         self.node_count = cyber_env._CyberBattleEnv__node_count
@@ -44,8 +53,17 @@ class AttackerEnvWrapper(gym.Env):
         self.valid_action_count = 0
         self.invalid_action_count = 0
 
+        # Add this object as an observer of the cyber env.
+        if event_source is None:
+            event_source = EnvironmentEventSource()
+
+        self.event_source = event_source
+        event_source.add_observer(self)
+
+        self.__done = False
+
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
-        observation_space = cyber_env.observation_space.__dict__['spaces']
+        observation_space = cyber_env.observation_space.__dict__['spaces'].copy()
 
         # Flatten the action_mask field.
         observation_space['local_vulnerability'] = observation_space['action_mask']['local_vulnerability']
@@ -73,7 +91,7 @@ class AttackerEnvWrapper(gym.Env):
 
         # This is incorrectly set to spaces.MultiDiscrete(model.PrivilegeLevel.MAXIMUM + 1), when it is only one value
         observation_space['escalation'] = spaces.Discrete(model.PrivilegeLevel.MAXIMUM + 1)
-        
+
         return spaces.Dict(observation_space)
 
     def __create_action_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
@@ -132,7 +150,7 @@ class AttackerEnvWrapper(gym.Env):
         if not self.cyber_env.is_action_valid(translated_action):
             # If it is not valid, we will try picking a random valid node and hoping
             # that makes the action valid.
-            
+
             # Pick source node at random (owned and with the desired feature encoding)
             potential_source_nodes = [
                 from_node
@@ -180,21 +198,32 @@ class AttackerEnvWrapper(gym.Env):
         transformed_observation = self.transform_observation(observation)
 
         self.timesteps += 1
-        if self.timesteps > self.max_timesteps:
+        if self.__done or self.timesteps > self.max_timesteps:
             done = True
 
         reward += reward_modifier
-        self.rewards.append(reward)
+        self.cyber_rewards.append(reward)
 
         return transformed_observation, reward, done, info
 
     def reset(self) -> Observation:
+        print('Reset Attacker')
+        if not self.__done:
+            self.event_source.notify_reset()
+
+        observation = self.cyber_env.reset()
+
+        self.__done = False
         self.valid_action_count = 0
         self.invalid_action_count = 0
         self.timesteps = 0
-        self.rewards = []
-        observation = self.cyber_env.reset()
+        self.cyber_rewards = []
+
         return self.transform_observation(observation)
+
+    def on_reset(self):
+        print('on_reset Attacker')
+        self.__done = True
 
     def transform_observation(self, observation) -> Observation:
         # Flatten the action_mask field
@@ -270,7 +299,7 @@ class AttackerEnvWrapper(gym.Env):
         fig = make_subplots(rows=1, cols=2)
 
         # CHANGE: Uses this environment's rewards instead of CyberBattle's.
-        fig.add_trace(go.Scatter(y=np.array(self.rewards).cumsum(),
+        fig.add_trace(go.Scatter(y=np.array(self.cyber_rewards).cumsum(),
             name='cumulative reward'), row=1, col=1)
 
         traces, layout = debug.network_as_plotly_traces(xref="x2", yref="y2")
@@ -278,3 +307,7 @@ class AttackerEnvWrapper(gym.Env):
             fig.add_trace(trace, row=1, col=2)
         fig.update_layout(layout)
         return fig
+
+    @property
+    def episode_rewards(self) -> List[float]:
+        return self.cyber_rewards

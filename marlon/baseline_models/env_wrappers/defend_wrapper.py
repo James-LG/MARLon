@@ -1,23 +1,27 @@
-from typing import Any, Dict, Tuple, TypedDict
+from typing import Any, Dict, Optional, Tuple, TypedDict
 import boolean
-import cyberbattle
-from gym.spaces.space import Space
-from cyberbattle.simulation import model
+import logging
+
 import numpy as np
 
-import gym
-from cyberbattle._env.cyberbattle_env import CyberBattleEnv, EnvironmentBounds, Observation
-from cyberbattle.simulation import model
-from gym import spaces
 from plotly.missing_ipywidgets import FigureWidget
-import logging
+
+import gym
+from gym import spaces
+from gym.spaces.space import Space
+
+from cyberbattle.simulation import model
+from cyberbattle._env.cyberbattle_env import CyberBattleEnv, EnvironmentBounds, Observation
+
+from marlon.baseline_models.env_wrappers.environment_event_source import IEnvironmentObserver, EnvironmentEventSource
+from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
 
 
 Defender_Observation = TypedDict('Defender_Observation', {'infected_nodes': np.ndarray,
                                                           'incoming_firewall_status':np.ndarray,
                                                           'outgoing_firewall_status':np.ndarray,
                                                           'services_status':np.ndarray})
-class DefenderEnvWrapper(gym.Env):
+class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
     '''
     Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to defend.
     '''
@@ -27,7 +31,12 @@ class DefenderEnvWrapper(gym.Env):
     int32_spaces = ['customer_data_found', 'escalation', 'lateral_move', 'newly_discovered_nodes_count', 'probe_result']
     firewall_rule_list = ["RDP", "SSH", "HTTPS", "HTTP", "su", "sudo"]
 
-    def __init__(self, cyber_env: CyberBattleEnv, max_timesteps=100, enable_action_penalty=True):
+    def __init__(self,
+        cyber_env: CyberBattleEnv,
+        attacker_reward_store: IRewardStore,
+        event_source: Optional[EnvironmentEventSource] = None,
+        max_timesteps=100,
+        enable_action_penalty=True):
         super().__init__()
         self.cyber_env: CyberBattleEnv = cyber_env
         self.bounds: EnvironmentBounds = self.cyber_env._bounds
@@ -40,13 +49,21 @@ class DefenderEnvWrapper(gym.Env):
         self.max_timesteps = max_timesteps
         self.timesteps = 0
         self.rewards = []
+        self.attacker_reward_store = attacker_reward_store
+
+        # Add this object as an observer of the cyber env.
+        if event_source is None:
+            event_source = EnvironmentEventSource()
+
+        self.event_source = event_source
+        event_source.add_observer(self)
+
+        self.__done = False
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
-        """Creates an observation space for the defender. Consists of:
-        a list all node's infected status,
-        All nodes incoming firewall status,
-        all nodes outgoing firewall status,
-        all services statuses."""
+        """Creates a compatible version of the attackers observation space."""
+        # TODO Change to defender view.
+        observation_space = cyber_env.observation_space.__dict__['spaces'].copy()
 
         # Calculate how many services there are, this is used to define the maximum number of services active at once.
         for _, node in model.iterate_network_nodes(cyber_env.environment.network):
@@ -96,23 +113,22 @@ class DefenderEnvWrapper(gym.Env):
             self.valid_action_count += 1
         # Tell the defender which action was choosen
         self.cyber_env._CyberBattleEnv__defender_agent.next_action = action
-
-        # Currently the defender is playing against a random agent.
-        attacker_action = self.cyber_env.sample_valid_action(kinds=[0, 1, 2])
         
-        # Execute the step
-        attacker_observation, reward, done, info = self.cyber_env.step(attacker_action)
         # Take the reward gained this step from the attacker's step and invert it so the defender 
         # loses more reward if the attacker succeeds.
-        reward = -1*(reward)
+        if self.attacker_reward_store.episode_rewards:
+            reward = -1*self.attacker_reward_store.episode_rewards[-1]
+        else:
+            reward = 0
 
         # Generate the new defender observation based on the defender's action
         defender_observation = self.observe()
         self.timesteps += 1
-        if self.timesteps > self.max_timesteps:
-            done = True
+
+        done = self.__done or self.timesteps > self.max_timesteps
+
         self.rewards.append(reward)
-        return defender_observation, reward, done, info
+        return defender_observation, reward, done, {}
 
     def is_defender_action_valid(self, action) -> boolean:
         """Determines if a given action is valid within the environment."""
@@ -202,15 +218,26 @@ class DefenderEnvWrapper(gym.Env):
             return False
 
     def reset(self) -> Observation:
-        self.valid_action_count = 0
-        self.invalid_action_count = 0
+        print('Reset Defender')
+        if not self.__done:
+            self.event_source.notify_reset()
+
         self.cyber_env.reset()
+
+        self.__done = False
         self.rewards = []
         self.timesteps = 0
+        self.valid_action_count = 0
+        self.invalid_action_count = 0
+
         return self.observe()
 
+    def on_reset(self):
+        print('on_reset Defender')
+        self.__done = True
+
     def get_blank_defender_observation(self):
-        """Creates a empty defender observation."""
+        """ Creates a empty defender observation. """
         obs = Defender_Observation(infected_nodes = [],
                                     incoming_firewall_status=[],
                                     outgoing_firewall_status=[],

@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: PPO Marl Train",
+            "type": "python",
+            "request": "launch",
+            "program": "marlon/baseline_models/ppo/train_marl.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
             "name": "Python: PPO Evaluate Defender",
             "type": "python",
             "request": "launch",

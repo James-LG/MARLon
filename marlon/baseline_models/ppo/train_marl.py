@@ -1,4 +1,4 @@
-from stable_baselines3 import A2C
+from stable_baselines3 import PPO
 
 from marlon.baseline_models.multiagent.baseline_marlon_agent import BaselineAgentBuilder
 from marlon.baseline_models.multiagent.multiagent_universe import MultiAgentUniverse
@@ -13,10 +13,15 @@ def train(evaluate_after=False):
     universe = MultiAgentUniverse.build(
         env_id='CyberBattleToyCtf-v0',
         attacker_builder=BaselineAgentBuilder(
-            alg_type=A2C,
+            alg_type=PPO,
             policy='MultiInputPolicy'
         ),
-        attacker_enable_action_penalty=ENABLE_ACTION_PENALTY
+        defender_builder=BaselineAgentBuilder(
+            alg_type=PPO,
+            policy='MultiInputPolicy'
+        ),
+        attacker_enable_action_penalty=ENABLE_ACTION_PENALTY,
+        defender_enable_action_penalty=ENABLE_ACTION_PENALTY
     )
 
     universe.learn(
@@ -25,7 +30,8 @@ def train(evaluate_after=False):
     )
 
     universe.save(
-        attacker_filepath='a2c.zip'
+        attacker_filepath='ppo_marl_attacker.zip',
+        defender_filepath='ppo_marl_defender.zip'
     )
 
     if evaluate_after:
