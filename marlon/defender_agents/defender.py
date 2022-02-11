@@ -23,18 +23,16 @@ class LearningDefender():
     """A defender that in theory will link up into the defend_wrapper"""
     firewall_rule_list = ["RDP", "SSH", "HTTPS", "HTTP", "su", "sudo"]
     def __init__(self, cyber_env: CyberBattleEnv ) -> None:
-        self.environment = cyber_env.environment
-        self.actions = cyber_env._defender_actuator
-        pass
+        self.cyber_env = cyber_env
     def executeAction(self, next_action):
-        self.actions.on_attacker_step_taken()
+        self.cyber_env._defender_actuator.on_attacker_step_taken()
         def get_node_from_action(node_from_action: int):
             """Converts from action number to node ID."""
-            return list(self.environment.network.nodes)[node_from_action]
+            return list(self.cyber_env.environment.network.nodes)[node_from_action]
 
         def get_node_info(node_id: model.NodeID):
             """Gets node info from node ID."""
-            return self.environment.get_node(node_id)
+            return self.cyber_env.environment.get_node(node_id)
 
         def get_firewall_port_name_from_action(port_name_from_action: int):
             """Gets the name of the firewall port from the constant firewall rule list."""
@@ -47,7 +45,7 @@ class LearningDefender():
              
         def block_traffic(node_id: model.NodeID, port_name: model.PortName, incoming: bool):
             """Blocks traffic on a node to or from a port with port_name."""
-            node_data = self.environment.get_node(node_id)
+            node_data = self.cyber_env.environment.get_node(node_id)
             node_info = get_node_info(node_id)
             rules = node_data.firewall.incoming if incoming else node_data.firewall.outgoing
             matching_rules = [r for r in rules if r.port == port_name]
@@ -57,7 +55,7 @@ class LearningDefender():
         
         def allow_traffic(node_id: model.NodeID, port_name: model.PortName, incoming: bool):
             """Creates a new firewall rule if one does not exist."""
-            node_data = self.environment.get_node(node_id)
+            node_data = self.cyber_env.environment.get_node(node_id)
             node_info = get_node_info(node_id)
             rules = node_data.firewall.incoming if incoming else node_data.firewall.outgoing
             matching_rules = [r for r in rules if r.port == port_name]
@@ -70,8 +68,7 @@ class LearningDefender():
             return
         # If the action is a reimage, reimage the node.
         if next_action[0] == 0:
-            self.actions.reimage_node(get_node_from_action(next_action[1]))
-            print(f"Reimaged node {next_action[1]}.")
+            self.cyber_env._defender_actuator.reimage_node(get_node_from_action(next_action[1]))
         
         # If the action is a block traffic.
         elif next_action[0] == 1:
@@ -90,9 +87,9 @@ class LearningDefender():
         # If the action is a stop service.
         elif next_action[0] == 3:
             node_id = get_node_from_action(next_action[8])
-            self.actions.stop_service(node_id, get_service_port_name_from_action(node_id, next_action[9]))
+            self.cyber_env._defender_actuator.stop_service(node_id, get_service_port_name_from_action(node_id, next_action[9]))
 
         # If the action is a start service.
         elif next_action[0] == 4:
             node_id = get_node_from_action(next_action[10])
-            self.actions.start_service(node_id, get_service_port_name_from_action(node_id, next_action[11]))
+            self.cyber_env._defender_actuator.start_service(node_id, get_service_port_name_from_action(node_id, next_action[11]))
