@@ -17,6 +17,7 @@ from marlon.baseline_models.env_wrappers.environment_event_source import IEnviro
 from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
 
 INVALID_ACTION_PENALTY = -1
+LOSS_PENALTY = -5000
 
 class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
     '''
@@ -41,7 +42,8 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
 
         # These should be set during reset()
         self.timesteps = None
-        self.cyber_rewards = None
+        self.cyber_rewards = [] # The rewards as given by CyberBattle, before modification.
+        self.rewards = [] # The rewards returned by this wrapper, after modification.
 
         # Access protected members only in the ctor to avoid pylint warnings.
         self.node_count = cyber_env._CyberBattleEnv__node_count
@@ -196,21 +198,29 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
 
         observation, reward, done, info = self.cyber_env.step(translated_action)
         transformed_observation = self.transform_observation(observation)
+        self.cyber_rewards.append(reward)
+
         if done:
             logging.warning("Attacker Won")
+
         self.timesteps += 1
-        if self.reset_request or self.timesteps > self.max_timesteps:
+        if self.reset_request:
+            done = True
+
+        if self.timesteps > self.max_timesteps:
+            reward_modifier += LOSS_PENALTY
             done = True
 
         reward += reward_modifier
-        self.cyber_rewards.append(reward)
+        self.rewards.append(reward)
 
         return transformed_observation, reward, done, info
 
     def reset(self) -> Observation:
         logging.info('Reset Attacker')
         if not self.reset_request:
-            self.event_source.notify_reset()
+            last_reward = self.rewards[-1] if len(self.rewards) > 0 else 0
+            self.event_source.notify_reset(last_reward)
 
         observation = self.cyber_env.reset()
 
@@ -219,10 +229,11 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         self.invalid_action_count = 0
         self.timesteps = 0
         self.cyber_rewards = []
+        self.rewards = []
 
         return self.transform_observation(observation)
 
-    def on_reset(self):
+    def on_reset(self, last_rewards):
         logging.info('on_reset Attacker')
         self.reset_request = True
 

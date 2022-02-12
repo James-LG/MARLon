@@ -23,9 +23,9 @@ def generate_graph_json(cyberbattle_env: CyberBattleEnv, iteration, current_scor
 
 def run_simulation(iteration_count, agent_file):
     if agent_file.endswith('.zip'):
-        if agent_file == 'ppo.zip':
+        if 'ppo' in agent_file:
             model = PPO.load(agent_file)
-        elif agent_file == 'a2c.zip':
+        elif 'a2c' in agent_file:
             model = A2C.load(agent_file)
         return run_baselines_simulation(model, iteration_count)
     else:
