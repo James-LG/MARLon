@@ -113,12 +113,15 @@
 <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
 <script type='text/javascript'>
     async function renderGraph (index) {
-        Plotly.newPlot('chart',graphs[index][0],{});
-        spnProgress.textContent = (graphs[index][1]) + '/' + (max_sim);
-
-        console.log(graphs)
-
-        return graphs[index][2];
+        //graphs[index][num]:
+        // num:
+        //  0(Attacker Graph)
+        //  1(Defender Graph)
+        //  2(Current Step in Graph)
+        //  3(Current Score)
+        Plotly.newPlot('chart',graphs[index][graphSelect],{});
+        spnProgress.textContent = (graphs[index][2]) + '/' + (max_sim);
+        return graphs[index][3];
     }
 
     async function updateGraph () {
@@ -141,6 +144,8 @@
     var graphs = {{graphs | safe}}
 
     var index = 0;
+    var graphSelect = 0;
+
 
     var spnProgress = document.getElementById("spnProgress");
     var spnScore = document.getElementById('spnScore');
@@ -163,12 +168,12 @@
         if(defenderView){
             btnView.innerHTML = 'Attacker View';
             btnView.className = 'button attacker';
-            index = num_graphs -1;
+            graphSelect = 1;
         }
         else{
             btnView.innerHTML = 'Defender View';
             btnView.className = 'button defender';
-            index = 0;
+            graphSelect = 0;
         }
         await updateGraph();
     }

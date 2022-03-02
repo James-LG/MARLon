@@ -22,6 +22,5 @@ def upload_file():
 
     SIMULATION.value = run_simulation(ITERATION_COUNT, afile.filename)
     graphs = json.dumps(SIMULATION.value, cls=plotly.utils.PlotlyJSONEncoder)
-
     
     return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(SIMULATION.value), graphs=graphs)
