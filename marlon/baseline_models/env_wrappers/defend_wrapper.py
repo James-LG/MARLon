@@ -54,6 +54,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         self.rewards = []
         self.attacker_reward_store = attacker_reward_store
         self.first = True
+        self.reset_request = False
         # Add this object as an observer of the cyber env.
         if event_source is None:
             event_source = EnvironmentEventSource()
@@ -63,8 +64,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         if defender:
             self.defender: LearningDefender = LearningDefender(cyber_env)
         else:
-            logger.error("Attempting to use the defender environment without a defender present.")
-        self.__done = False
+            logging.error("Attempting to use the defender environment without a defender present.")
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         """Creates a compatible version of the attackers observation space."""
@@ -130,7 +130,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         defender_observation = self.observe()
         self.timesteps += 1
 
-        done = self.__done or self.timesteps > self.max_timesteps or done
+        done = self.reset_request or self.timesteps > self.max_timesteps or done
 
         self.rewards.append(reward)
         return defender_observation, reward, done, {}
@@ -224,12 +224,12 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
 
     def reset(self) -> Observation:
         print('Reset Defender')
-        if not self.__done:
+        if not self.reset_request:
             self.event_source.notify_reset()
 
         self.cyber_env.reset()
 
-        self.__done = False
+        self.reset_request = False
         self.rewards = []
         self.timesteps = 0
         self.valid_action_count = 0
@@ -239,7 +239,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
 
     def on_reset(self):
         print('on_reset Defender')
-        self.__done = True
+        self.reset_request = True
 
     def get_blank_defender_observation(self):
         """ Creates a empty defender observation. """
@@ -292,6 +292,9 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         # Lists all possible services, 1 if active, 0 if not.
         new_observation['services_status'] = np.array(all_services_list)
         return new_observation
+
+    def set_reset_request(self, reset_request):
+        self.reset_request = reset_request
 
     def defender_constraints_broken(self):
         return self.cyber_env._defender_actuator.network_availability < self.cyber_env._CyberBattleEnv__defender_constraint.maintain_sla

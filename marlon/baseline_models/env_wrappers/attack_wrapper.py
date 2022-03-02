@@ -60,7 +60,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         self.event_source = event_source
         event_source.add_observer(self)
 
-        self.__done = False
+        self.reset_request = False
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         observation_space = cyber_env.observation_space.__dict__['spaces'].copy()
@@ -198,7 +198,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         transformed_observation = self.transform_observation(observation)
 
         self.timesteps += 1
-        if self.__done or self.timesteps > self.max_timesteps:
+        if self.reset_request or self.timesteps > self.max_timesteps:
             done = True
 
         reward += reward_modifier
@@ -208,12 +208,12 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
 
     def reset(self) -> Observation:
         print('Reset Attacker')
-        if not self.__done:
+        if not self.reset_request:
             self.event_source.notify_reset()
 
         observation = self.cyber_env.reset()
 
-        self.__done = False
+        self.reset_request = False
         self.valid_action_count = 0
         self.invalid_action_count = 0
         self.timesteps = 0
@@ -223,7 +223,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
 
     def on_reset(self):
         print('on_reset Attacker')
-        self.__done = True
+        self.reset_request = True
 
     def transform_observation(self, observation) -> Observation:
         # Flatten the action_mask field

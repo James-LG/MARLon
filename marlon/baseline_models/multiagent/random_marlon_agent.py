@@ -63,8 +63,8 @@ class RandomMarlonAgent(MarlonAgent):
 
         # Baseline models reset the environment automatically when training is stopped.
         # We must simulate the behaviour.
-        # if done:
-        #     self.env.reset()
+        if done:
+            self.env.reset()
 
         return continue_training, None, None
 

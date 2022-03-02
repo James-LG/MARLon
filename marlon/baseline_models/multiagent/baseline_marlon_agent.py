@@ -25,13 +25,18 @@ class BaselineAgentBuilder(AgentBuilder):
 
     def build(self, wrapper: GymEnv) -> MarlonAgent:
         model = self.alg_type(self.policy, Monitor(wrapper), verbose=1)
-        return BaselineMarlonAgent(model)
+        return BaselineMarlonAgent(model, wrapper)
 
 class BaselineMarlonAgent(MarlonAgent):
-    def __init__(self, baseline_model: OnPolicyAlgorithm):
+    def __init__(self, baseline_model: OnPolicyAlgorithm, wrapper):
         self.baseline_model: OnPolicyAlgorithm = baseline_model
         self.callback: BaseCallback = None
-
+        self._wrapper = wrapper
+    
+    @property
+    def wrapper(self):
+        return self._wrapper
+    
     @property
     def rollout_buffer(self) -> RolloutBuffer:
         return self.baseline_model.rollout_buffer
