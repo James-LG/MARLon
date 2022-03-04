@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+import logging
+import os
 from typing import Optional
 
 import numpy as np
@@ -16,11 +18,32 @@ from marlon.baseline_models.multiagent import marl_algorithm
 
 
 class AgentBuilder(ABC):
+    '''Builder capable of creating a generic MarlonAgent given a wrapper.'''
+
     @abstractmethod
-    def build(self, wrapper: GymEnv) -> MarlonAgent:
+    def build(self, wrapper: GymEnv, logger: logging.Logger) -> MarlonAgent:
+        '''
+        Build a generic MarlonAgent given a wrapper.
+
+        Parameters
+        ----------
+            wrapper : GymEnv
+                The wrapper the agent will operate on.
+            logger : Logger
+                Logger instance to write logs with.
+
+        Returns
+        -------
+            A MarlonAgent built for the given wrapper.
+        '''
         raise NotImplementedError
 
 class MultiAgentUniverse:
+    '''
+    Helps build multi-agent environments by handling intracacies of various
+    combinations of attacker and defender agents.
+    '''
+
     @classmethod
     def build(cls,
         attacker_builder: AgentBuilder,
@@ -30,6 +53,34 @@ class MultiAgentUniverse:
         env_id: str = "CyberBattleToyCtf-v0",
         max_timesteps: int = 2000,
         attacker_loss_reward: float = -5000.0):
+        '''
+        Static factory method to create a MultiAgentUniverse with the given options.
+
+        Parameters
+        ----------
+        attacker_builder : AgentBuilder
+            A builder that will create an attacker MarlonAgent.
+        attacker_enable_action_penalty : bool
+            Whether the AttackerEnvWrapper should enable invalid action penalties.
+        defender_builder : AgentBuilder
+            A builder that will create a defender MarlonAgent.
+        defender_enable_action_penalty : bool
+            Whether the DefnederEnvWrapper should enable invalid action penalties.
+        env_id : str
+            The gym environment ID to create. Should return a type that inherits CyberBattleEnv.
+        max_timesteps : int
+            The max timesteps per episode before the simulation is forced to end.
+            Useful if training gets stuck on a single episode for too long.
+
+        Returns
+        -------
+            A MultiAgentUniverse configured with the given options.
+        '''
+
+        log_level = os.environ.get('LOGLEVEL', 'INFO').upper()
+        logger = logging.Logger('marlon', level=log_level)
+        console_handler = logging.StreamHandler()
+        logger.addHandler(console_handler)
 
         if defender_builder:
             cyber_env = gym.make(
@@ -47,7 +98,7 @@ class MultiAgentUniverse:
             invalid_action_reward=attacker_invalid_action_reward,
             loss_reward=attacker_loss_reward
         )
-        attacker_agent = attacker_builder.build(attacker_wrapper)
+        attacker_agent = attacker_builder.build(attacker_wrapper, logger)
 
         defender_agent = None
         if defender_builder:
@@ -59,24 +110,40 @@ class MultiAgentUniverse:
                 enable_action_penalty=defender_invalid_action_reward,
                 defender=True
             )
-            defender_agent = defender_builder.build(defender_wrapper)
+            defender_agent = defender_builder.build(defender_wrapper, logger)
 
         return MultiAgentUniverse(
             attacker_agent=attacker_agent,
             defender_agent=defender_agent,
-            max_timesteps=max_timesteps
+            max_timesteps=max_timesteps,
+            logger=logger
         )
 
     def __init__(self,
         attacker_agent: MarlonAgent,
         defender_agent: Optional[MarlonAgent],
-        max_timesteps: int):
+        max_timesteps: int,
+        logger: logging.Logger):
 
         self.attacker_agent = attacker_agent
         self.defender_agent = defender_agent
         self.max_timesteps = max_timesteps
+        self.logger = logger
 
     def learn(self, total_timesteps: int, n_eval_episodes: int):
+        '''
+        Train all agents in the universe for the specified amount of steps or episodes,
+        which ever comes first.
+
+        Parameters
+        ----------
+        total_timesteps : int
+            The maximum number of timesteps to train for, across all episodes.
+        n_eval_episodes : int
+            The maximum number of episodes to train for, regardless of timesteps.
+        '''
+
+        self.logger.info('Training started')
         if self.defender_agent:
             marl_algorithm.learn(
                 attacker_agent=self.attacker_agent,
@@ -89,8 +156,20 @@ class MultiAgentUniverse:
                 total_timesteps=total_timesteps,
                 n_eval_episodes=n_eval_episodes
             )
+        self.logger.info('Training complete')
 
-    def evaluate(self, n_episodes):
+    def evaluate(self, n_episodes: int):
+        '''
+        Evaluate all agents in the universe for the given number of episodes.
+
+        Parameters
+        ----------
+        n_episodes : int
+            The number of episodes to evaluate for.
+            Results will be calculated as averages per episode.
+        '''
+        self.logger.info('Evaluation started')
+
         attacker_rewards = []
         defender_rewards = []
 
@@ -112,31 +191,44 @@ class MultiAgentUniverse:
         mean1 = np.mean(attacker_rewards)
         std_dev1 = np.std(attacker_rewards)
 
-        print( '-----------------------')
-        print( '| Evaluation Complete |')
-        print( '-----------------------')
-        print( '| Attacker:           |')
-        print(f'|   mean:    {mean1:.2f}')
-        print(f'|   std_dev: {std_dev1:.2f}')
-        print( '-----------------------')
+        self.logger.info('-----------------------')
+        self.logger.info('| Evaluation Complete |')
+        self.logger.info('-----------------------')
+        self.logger.info('| Attacker:           |')
+        self.logger.info('|   mean:    %.2f', mean1)
+        self.logger.info('|   std_dev: %.2f', std_dev1)
+        self.logger.info('-----------------------')
 
         if self.defender_agent:
             mean2 = np.mean(defender_rewards)
             std_dev2 = np.std(defender_rewards)
 
-            print( '| Defender:           |')
-            print(f'|   mean:    {mean2:.2f}')
-            print(f'|   std_dev: {std_dev2:.2f}')
-            print( '-----------------------')
+            self.logger.info('| Defender:           |')
+            self.logger.info('|   mean:    %.2f', mean2)
+            self.logger.info('|   std_dev: %.2f', std_dev2)
+            self.logger.info('-----------------------')
 
     def save(self,
         attacker_filepath: Optional[str] = None,
         defender_filepath: Optional[str] = None):
+        '''
+        Save all agents in the universe at the specified file paths.
+
+        It is safe to supply a file path for an agent that does not actually
+        exist in the universe. Therefore it is safe for both file paths
+        to always be supplied, regardless of universe configuration.
+
+        Parameters
+        attacker_filepath : Optional[str]
+            The file path to save the attacker agent.
+        '''
 
         if attacker_filepath is not None:
+            self.logger.info('Attacker agent saving...')
             self.attacker_agent.save(attacker_filepath)
 
         if defender_filepath is not None and\
             self.defender_agent is not None:
 
+            self.logger.info('Defender agent saving...')
             self.defender_agent.save(defender_filepath)

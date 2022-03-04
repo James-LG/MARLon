@@ -23,9 +23,7 @@ Defender_Observation = TypedDict('Defender_Observation', {'infected_nodes': np.n
                                                           'outgoing_firewall_status':np.ndarray,
                                                           'services_status':np.ndarray})
 class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
-    '''
-    Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to defend.
-    '''
+    """Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to defend."""
 
     nested_spaces = ['credential_cache_matrix', 'leaked_credentials']
     other_removed_spaces = ['local_vulnerability', 'remote_vulnerability', 'connect']
@@ -227,7 +225,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
             return False
 
     def reset(self) -> Observation:
-        logging.info('Reset Defender')
+        logging.debug('Reset Defender')
         if not self.reset_request:
             self.event_source.notify_reset(last_reward=0)
 
@@ -243,7 +241,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         return self.observe()
 
     def on_reset(self, last_reward):
-        logging.info('on_reset Defender')
+        logging.debug('on_reset Defender')
         self.reset_request = True
         self.__last_attacker_reward = last_reward
 

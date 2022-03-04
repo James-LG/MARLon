@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Optional, Tuple
 
 import numpy as np
@@ -9,6 +10,8 @@ from marlon.baseline_models.multiagent.marlon_agent import MarlonAgent
 from marlon.baseline_models.multiagent.multiagent_universe import AgentBuilder
 
 class RandomAgentBuilder(AgentBuilder):
+    '''Assists in building RandomMarlonAgents.'''
+
     def __init__(self,
         num_timesteps: int = 2048,
         n_rollout_steps: int = 2048) -> None:
@@ -16,20 +19,24 @@ class RandomAgentBuilder(AgentBuilder):
         self.num_timesteps = num_timesteps
         self.n_rollout_steps = n_rollout_steps
 
-    def build(self, wrapper: GymEnv) -> MarlonAgent:
+    def build(self, wrapper: GymEnv, logger: logging.Logger) -> MarlonAgent:
         return RandomMarlonAgent(
             env=Monitor(wrapper),
             num_timesteps=self.num_timesteps,
             n_rollout_steps=self.n_rollout_steps,
-            wrapper=wrapper
+            wrapper=wrapper,
+            logger=logger
         )
 
 class RandomMarlonAgent(MarlonAgent):
+    '''Agent that selects actions from the action space at random.'''
+
     def __init__(self,
         env: GymEnv,
         num_timesteps: int,
         n_rollout_steps: int,
-        wrapper):
+        wrapper: GymEnv,
+        logger: logging.Logger):
 
         self._env = env
         self._num_timesteps = num_timesteps
@@ -37,6 +44,7 @@ class RandomMarlonAgent(MarlonAgent):
         self.episode_count = 0
         self.n_eval_episodes = 0
         self._wrapper = wrapper
+        self.logger = logger
 
     @property
     def wrapper(self):
@@ -48,10 +56,6 @@ class RandomMarlonAgent(MarlonAgent):
     @property
     def num_timesteps(self) -> int:
         return self._num_timesteps
-
-    @num_timesteps.setter
-    def num_timesteps(self, value):
-        self._num_timesteps = value
 
     @property
     def n_rollout_steps(self) -> int:
@@ -120,5 +124,4 @@ class RandomMarlonAgent(MarlonAgent):
         pass
 
     def save(self, filepath: str):
-        # We don't dot hat here.
-        pass
+        self.logger.info('Random agent does not require saving')
