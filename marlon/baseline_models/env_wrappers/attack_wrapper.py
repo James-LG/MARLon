@@ -5,7 +5,7 @@ import numpy as np
 from plotly.missing_ipywidgets import FigureWidget
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
+import logging
 import gym
 from gym import spaces
 from gym.spaces.space import Space
@@ -196,7 +196,8 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
 
         observation, reward, done, info = self.cyber_env.step(translated_action)
         transformed_observation = self.transform_observation(observation)
-
+        if done:
+            logging.warning("Attacker Won")
         self.timesteps += 1
         if self.reset_request or self.timesteps > self.max_timesteps:
             done = True
@@ -207,7 +208,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         return transformed_observation, reward, done, info
 
     def reset(self) -> Observation:
-        print('Reset Attacker')
+        logging.info('Reset Attacker')
         if not self.reset_request:
             self.event_source.notify_reset()
 
@@ -222,7 +223,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         return self.transform_observation(observation)
 
     def on_reset(self):
-        print('on_reset Attacker')
+        logging.info('on_reset Attacker')
         self.reset_request = True
 
     def transform_observation(self, observation) -> Observation:

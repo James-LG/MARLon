@@ -106,7 +106,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         done = False
         # Check for action validity
         if not self.is_defender_action_valid(action):
-            logging.warning(f"Action choosen is outside action space. Defender will skip this turn. Action = {action}")
+            logging.info(f"Action chosen is outside action space. Defender will skip this turn. Action = {action}")
             self.invalid_action_count += 1
             # If the action is invalid, pass an empty list to the defender
             action = []
@@ -122,6 +122,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
 
         if self.defender_constraints_broken():
             reward = self.cyber_env._CyberBattleEnv__LOSING_REWARD
+            logging.warning("Defender Lost")
             done = True
         if self.cyber_env._CyberBattleEnv__defender_goal_reached():
             reward = self.cyber_env._CyberBattleEnv__WINNING_REWARD
@@ -223,7 +224,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
             return False
 
     def reset(self) -> Observation:
-        print('Reset Defender')
+        logging.info('Reset Defender')
         if not self.reset_request:
             self.event_source.notify_reset()
 
@@ -238,7 +239,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         return self.observe()
 
     def on_reset(self):
-        print('on_reset Defender')
+        logging.info('on_reset Defender')
         self.reset_request = True
 
     def get_blank_defender_observation(self):
