@@ -61,10 +61,8 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
 
         self.event_source = event_source
         event_source.add_observer(self)
-        if defender:
-            self.defender: LearningDefender = LearningDefender(cyber_env)
-        else:
-            logging.error("Attempting to use the defender environment without a defender present.")
+        assert defender is not None, "Attempting to use the defender environment without a defender present."
+        self.defender: LearningDefender = LearningDefender(cyber_env)
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         """Creates a compatible version of the attackers observation space."""
