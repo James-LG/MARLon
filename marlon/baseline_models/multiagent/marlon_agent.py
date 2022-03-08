@@ -7,6 +7,12 @@ from stable_baselines3.common.type_aliases import GymEnv
 
 
 class MarlonAgent(ABC):
+
+    @property
+    @abstractmethod
+    def wrapper(self):
+        raise NotImplementedError
+
     @property
     @abstractmethod
     def env(self) -> GymEnv:

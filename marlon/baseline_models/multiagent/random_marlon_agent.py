@@ -27,14 +27,19 @@ class RandomMarlonAgent(MarlonAgent):
     def __init__(self,
         env: GymEnv,
         num_timesteps: int,
-        n_rollout_steps: int):
+        n_rollout_steps: int,
+        wrapper):
 
         self._env = env
         self._num_timesteps = num_timesteps
         self._n_rollout_steps = n_rollout_steps
         self.episode_count = 0
         self.n_eval_episodes = 0
+        self._wrapper = wrapper
 
+    @property
+    def wrapper(self):
+        return self._wrapper
     @property
     def env(self) -> GymEnv:
         return self._env
