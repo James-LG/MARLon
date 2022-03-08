@@ -20,7 +20,8 @@ class RandomAgentBuilder(AgentBuilder):
         return RandomMarlonAgent(
             env=Monitor(wrapper),
             num_timesteps=self.num_timesteps,
-            n_rollout_steps=self.n_rollout_steps
+            n_rollout_steps=self.n_rollout_steps,
+            wrapper=wrapper
         )
 
 class RandomMarlonAgent(MarlonAgent):
