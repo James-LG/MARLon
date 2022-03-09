@@ -5,7 +5,7 @@ from marlon.baseline_models.multiagent.multiagent_universe import MultiAgentUniv
 from marlon.baseline_models.multiagent.random_marlon_agent import RandomAgentBuilder
 
 ENV_MAX_TIMESTEPS = 2000
-LEARN_TIMESTEPS = 10_000
+LEARN_TIMESTEPS = 10_0000
 LEARN_EPISODES = 1000 # Set this to a large value to stop at LEARN_TIMESTEPS instead.
 ENABLE_ACTION_PENALTY = True
 EVALUATE_EPISODES = 5
@@ -26,7 +26,6 @@ def train(evaluate_after=False):
         total_timesteps=LEARN_TIMESTEPS,
         n_eval_episodes=LEARN_EPISODES
     )
-
     universe.save(
         defender_filepath='ppo_defender.zip'
     )

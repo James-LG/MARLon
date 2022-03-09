@@ -5,7 +5,7 @@ import numpy as np
 from plotly.missing_ipywidgets import FigureWidget
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
+import logging
 import gym
 from gym import spaces
 from gym.spaces.space import Space
@@ -60,7 +60,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         self.event_source = event_source
         event_source.add_observer(self)
 
-        self.__done = False
+        self.reset_request = False
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         observation_space = cyber_env.observation_space.__dict__['spaces'].copy()
@@ -196,9 +196,10 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
 
         observation, reward, done, info = self.cyber_env.step(translated_action)
         transformed_observation = self.transform_observation(observation)
-
+        if done:
+            logging.warning("Attacker Won")
         self.timesteps += 1
-        if self.__done or self.timesteps > self.max_timesteps:
+        if self.reset_request or self.timesteps > self.max_timesteps:
             done = True
 
         reward += reward_modifier
@@ -207,13 +208,13 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         return transformed_observation, reward, done, info
 
     def reset(self) -> Observation:
-        print('Reset Attacker')
-        if not self.__done:
+        logging.info('Reset Attacker')
+        if not self.reset_request:
             self.event_source.notify_reset()
 
         observation = self.cyber_env.reset()
 
-        self.__done = False
+        self.reset_request = False
         self.valid_action_count = 0
         self.invalid_action_count = 0
         self.timesteps = 0
@@ -222,8 +223,8 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         return self.transform_observation(observation)
 
     def on_reset(self):
-        print('on_reset Attacker')
-        self.__done = True
+        logging.info('on_reset Attacker')
+        self.reset_request = True
 
     def transform_observation(self, observation) -> Observation:
         # Flatten the action_mask field

@@ -9,7 +9,6 @@ from stable_baselines3.common.type_aliases import GymEnv
 from cyberbattle._env.cyberbattle_env import DefenderConstraint
 from marlon.baseline_models.env_wrappers.environment_event_source import EnvironmentEventSource
 
-from marlon.defender_agents.defender import PrototypeLearningDefender
 from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
 from marlon.baseline_models.env_wrappers.defend_wrapper import DefenderEnvWrapper
 from marlon.baseline_models.multiagent.marlon_agent import MarlonAgent
@@ -34,8 +33,7 @@ class MultiAgentUniverse:
         if defender_builder:
             cyber_env = gym.make(
                 env_id,
-                defender_constraint=DefenderConstraint(maintain_sla=0.80),
-                defender_agent=PrototypeLearningDefender())
+                defender_constraint=DefenderConstraint(maintain_sla=0.80))
         else:
             cyber_env = gym.make(env_id)
 
@@ -56,7 +54,8 @@ class MultiAgentUniverse:
                 event_source=event_source,
                 attacker_reward_store=attacker_wrapper,
                 max_timesteps=max_timesteps,
-                enable_action_penalty=defender_enable_action_penalty
+                enable_action_penalty=defender_enable_action_penalty,
+                defender=True
             )
             defender_agent = defender_builder.build(defender_wrapper)
 

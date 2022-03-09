@@ -30,11 +30,8 @@ def collect_rollouts(
 
     while n_steps < attacker_agent.n_rollout_steps and n_steps < defender_agent.n_rollout_steps:
         continue1, new_obs1, dones1 = attacker_agent.perform_step(n_steps)
-        if continue1 is False:
-            return False
-
         continue2, new_obs2, dones2 = defender_agent.perform_step(n_steps)
-        if continue2 is False:
+        if continue1 is False or continue2 is False:
             return False
 
         n_steps += 1
@@ -106,6 +103,7 @@ def run_episode(
     obs1 = attacker_agent.env.reset()
 
     if defender_agent:
+        defender_agent.wrapper.on_reset()
         obs2 = defender_agent.env.reset()
 
     attacker_rewards = []
@@ -120,9 +118,6 @@ def run_episode(
 
         attacker_rewards.append(rewards1)
 
-        if dones1:
-            break
-
         if defender_agent:
             action2 = defender_agent.predict(observation=obs2)
             obs2, rewards2, dones2, _ = defender_agent.env.step(action2)
@@ -131,9 +126,11 @@ def run_episode(
 
             defender_rewards.append(rewards2)
 
-            if dones2:
+            if dones1 or dones2:
                 break
-
+        else:
+            if dones1:
+                break
         n_steps += 1
 
     return attacker_rewards, defender_rewards

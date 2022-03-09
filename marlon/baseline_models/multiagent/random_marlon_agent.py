@@ -20,19 +20,27 @@ class RandomAgentBuilder(AgentBuilder):
         return RandomMarlonAgent(
             env=Monitor(wrapper),
             num_timesteps=self.num_timesteps,
-            n_rollout_steps=self.n_rollout_steps
+            n_rollout_steps=self.n_rollout_steps,
+            wrapper=wrapper
         )
 
 class RandomMarlonAgent(MarlonAgent):
     def __init__(self,
         env: GymEnv,
         num_timesteps: int,
-        n_rollout_steps: int):
+        n_rollout_steps: int,
+        wrapper):
 
         self._env = env
         self._num_timesteps = num_timesteps
         self._n_rollout_steps = n_rollout_steps
+        self.episode_count = 0
+        self.n_eval_episodes = 0
+        self._wrapper = wrapper
 
+    @property
+    def wrapper(self):
+        return self._wrapper
     @property
     def env(self) -> GymEnv:
         return self._env
@@ -59,12 +67,13 @@ class RandomMarlonAgent(MarlonAgent):
 
         # First value is whether to continue, this is normally determined by a callback
         # which we don't have, so we'll rely on the done flag.
-        continue_training = not done
-
         # Baseline models reset the environment automatically when training is stopped.
         # We must simulate the behaviour.
-        # if done:
-        #     self.env.reset()
+        if done:
+            self.env.reset()
+            self.episode_count+=1
+
+        continue_training = self.episode_count < self.n_eval_episodes
 
         return continue_training, None, None
 
@@ -88,7 +97,8 @@ class RandomMarlonAgent(MarlonAgent):
         eval_log_path: Optional[str],
         reset_num_timesteps: bool,
         tb_log_name: str) -> int:
-
+        self.episode_count = 0
+        self.n_eval_episodes = n_eval_episodes 
         # We don't do that here.
         return total_timesteps
 
