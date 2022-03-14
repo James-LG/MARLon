@@ -35,7 +35,7 @@ def run_baselines_simulation(model, iteration_count):
     # Load the Gym environment
     gymid = "CyberBattleToyCtf-v0"
     gym_env = gym.make(gymid)
-    gym_env = AttackerEnvWrapper(gym_env, enable_action_penalty=False)
+    gym_env = AttackerEnvWrapper(gym_env, invalid_action_reward=False)
 
     obs = gym_env.reset()
 

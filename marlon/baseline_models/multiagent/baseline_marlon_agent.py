@@ -27,6 +27,17 @@ class BaselineAgentBuilder(AgentBuilder):
         model = self.alg_type(self.policy, Monitor(wrapper), verbose=1)
         return BaselineMarlonAgent(model, wrapper)
 
+class LoadFileBaselineAgentBuilder(AgentBuilder):
+    def __init__(self, alg_type: Type, file_path: str):
+        assert issubclass(alg_type, OnPolicyAlgorithm), "Algorithm type must inherit OnPolicyAlgorithm."
+
+        self.alg_type = alg_type
+        self.model = self.alg_type.load(file_path)
+
+    def build(self, wrapper: GymEnv) -> MarlonAgent:
+        self.model.env = Monitor(wrapper)
+        return BaselineMarlonAgent(self.model, wrapper)
+
 class BaselineMarlonAgent(MarlonAgent):
     def __init__(self, baseline_model: OnPolicyAlgorithm, wrapper):
         self.baseline_model: OnPolicyAlgorithm = baseline_model

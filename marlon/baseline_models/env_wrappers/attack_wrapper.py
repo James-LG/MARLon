@@ -16,9 +16,6 @@ from cyberbattle.simulation import commandcontrol, model
 from marlon.baseline_models.env_wrappers.environment_event_source import IEnvironmentObserver, EnvironmentEventSource
 from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
 
-INVALID_ACTION_PENALTY = -1
-LOSS_PENALTY = -5000
-
 class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
     '''
     Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to attack.
@@ -32,13 +29,15 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         cyber_env: CyberBattleEnv,
         event_source: Optional[EnvironmentEventSource] = None,
         max_timesteps=2000,
-        enable_action_penalty=True):
+        invalid_action_reward=-1,
+        loss_reward=-5000):
 
         super().__init__()
         self.cyber_env: CyberBattleEnv = cyber_env
         self.bounds: EnvironmentBounds = self.cyber_env._bounds
         self.max_timesteps = max_timesteps
-        self.enable_action_penalty = enable_action_penalty
+        self.invalid_action_penalty = invalid_action_reward
+        self.loss_reward = loss_reward
 
         # These should be set during reset()
         self.timesteps = None
@@ -191,8 +190,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
             translated_action = self.cyber_env.sample_valid_action(kinds=[0, 1, 2])
             self.invalid_action_count += 1
 
-            if self.enable_action_penalty:
-                reward_modifier = INVALID_ACTION_PENALTY
+            reward_modifier += self.invalid_action_penalty
         else:
             self.valid_action_count += 1
 
@@ -208,7 +206,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
             done = True
 
         if self.timesteps > self.max_timesteps:
-            reward_modifier += LOSS_PENALTY
+            reward_modifier += self.loss_reward
             done = True
 
         reward += reward_modifier
