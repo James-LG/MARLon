@@ -24,11 +24,12 @@ class MultiAgentUniverse:
     @classmethod
     def build(cls,
         attacker_builder: AgentBuilder,
-        attacker_enable_action_penalty = True,
+        attacker_invalid_action_reward = -1,
         defender_builder: Optional[AgentBuilder] = None,
-        defender_enable_action_penalty = True,
+        defender_invalid_action_reward = -1,
         env_id: str = "CyberBattleToyCtf-v0",
-        max_timesteps: int = 2000):
+        max_timesteps: int = 2000,
+        attacker_loss_reward: float = -5000.0):
 
         if defender_builder:
             cyber_env = gym.make(
@@ -43,7 +44,8 @@ class MultiAgentUniverse:
             cyber_env=cyber_env,
             event_source=event_source,
             max_timesteps=max_timesteps,
-            enable_action_penalty=attacker_enable_action_penalty
+            invalid_action_reward=attacker_invalid_action_reward,
+            loss_reward=attacker_loss_reward
         )
         attacker_agent = attacker_builder.build(attacker_wrapper)
 
@@ -54,7 +56,7 @@ class MultiAgentUniverse:
                 event_source=event_source,
                 attacker_reward_store=attacker_wrapper,
                 max_timesteps=max_timesteps,
-                enable_action_penalty=defender_enable_action_penalty,
+                enable_action_penalty=defender_invalid_action_reward,
                 defender=True
             )
             defender_agent = defender_builder.build(defender_wrapper)
@@ -138,10 +140,3 @@ class MultiAgentUniverse:
             self.defender_agent is not None:
 
             self.defender_agent.save(defender_filepath)
-
-    def load(self,
-        attacker_filepath: str,
-        defender_filepath: Optional[str] = None):
-
-        # TODO
-        raise NotImplementedError

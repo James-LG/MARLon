@@ -1,31 +1,23 @@
-import numpy as np
-
-import gym
-import cyberbattle
 from stable_baselines3 import A2C
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.evaluation import evaluate_policy
+from marlon.baseline_models.multiagent.baseline_marlon_agent import LoadFileBaselineAgentBuilder
+from marlon.baseline_models.multiagent.multiagent_universe import MultiAgentUniverse
+from marlon.baseline_models.a2c.train import ATTACKER_SAVE_PATH
 
-from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
+EVALUATE_EPISODES = 5
 
-def evaluate(max_timesteps):
-    env_id = "CyberBattleToyCtf-v0"
-    cyber_env = gym.make(env_id)
-    env = AttackerEnvWrapper(cyber_env, max_timesteps, enable_action_penalty=False)
+def evaluate():
+    universe = MultiAgentUniverse.build(
+        env_id='CyberBattleToyCtf-v0',
+        attacker_builder=LoadFileBaselineAgentBuilder(
+            alg_type=A2C,
+            file_path=ATTACKER_SAVE_PATH
+        ),
+        attacker_invalid_action_reward=0
+    )
 
-    model = A2C.load('a2c.zip')
-
-    mean_reward, std_reward = evaluate_policy(model, Monitor(env), n_eval_episodes=10)
-
-    obs = env.reset()
-    for _ in range(2000):
-        action, _states = model.predict(obs)
-        obs, _reward, _done, _info = env.step(action)
-
-    tot_reward = np.sum(env.cyber_rewards)
-
-    print('tot reward', tot_reward, 'mean reward', mean_reward, 'std reward', std_reward)
-    print('valid actions', env.valid_action_count, 'invalid actions', env.invalid_action_count)
+    universe.evaluate(
+        n_episodes=EVALUATE_EPISODES
+    )
 
 if __name__ == "__main__":
-    evaluate(2000)
+    evaluate()

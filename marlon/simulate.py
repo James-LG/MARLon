@@ -23,9 +23,9 @@ def generate_graph_json(cyberbattle_env: CyberBattleEnv, iteration, current_scor
 
 def run_simulation(iteration_count, agent_file):
     if agent_file.endswith('.zip'):
-        if agent_file == 'ppo.zip':
+        if 'ppo' in agent_file:
             model = PPO.load(agent_file)
-        elif agent_file == 'a2c.zip':
+        elif 'a2c' in agent_file:
             model = A2C.load(agent_file)
         return run_baselines_simulation(model, iteration_count)
     else:
@@ -35,7 +35,7 @@ def run_baselines_simulation(model, iteration_count):
     # Load the Gym environment
     gymid = "CyberBattleToyCtf-v0"
     gym_env = gym.make(gymid)
-    gym_env = AttackerEnvWrapper(gym_env, enable_action_penalty=False)
+    gym_env = AttackerEnvWrapper(gym_env, invalid_action_reward=False)
 
     obs = gym_env.reset()
 

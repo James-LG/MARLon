@@ -6,8 +6,11 @@ from marlon.baseline_models.multiagent.multiagent_universe import MultiAgentUniv
 ENV_MAX_TIMESTEPS = 2000
 LEARN_TIMESTEPS = 10_000
 LEARN_EPISODES = 1000 # Set this to a large value to stop at LEARN_TIMESTEPS instead.
-ENABLE_ACTION_PENALTY = True
+ATTACKER_INVALID_ACTION_REWARD = -1
+DEFENDER_INVALID_ACTION_REWARD = -1
 EVALUATE_EPISODES = 5
+ATTACKER_SAVE_PATH = 'ppo_marl_attacker.zip'
+DEFENDER_SAVE_PATH = 'ppo_marl_defender.zip'
 
 def train(evaluate_after=False):
     universe = MultiAgentUniverse.build(
@@ -20,8 +23,8 @@ def train(evaluate_after=False):
             alg_type=PPO,
             policy='MultiInputPolicy'
         ),
-        attacker_enable_action_penalty=ENABLE_ACTION_PENALTY,
-        defender_enable_action_penalty=ENABLE_ACTION_PENALTY
+        attacker_invalid_action_reward=ATTACKER_INVALID_ACTION_REWARD,
+        defender_invalid_action_reward=DEFENDER_INVALID_ACTION_REWARD
     )
 
     universe.learn(
@@ -30,8 +33,8 @@ def train(evaluate_after=False):
     )
 
     universe.save(
-        attacker_filepath='ppo_marl_attacker.zip',
-        defender_filepath='ppo_marl_defender.zip'
+        attacker_filepath=ATTACKER_SAVE_PATH,
+        defender_filepath=DEFENDER_SAVE_PATH
     )
 
     if evaluate_after:

@@ -16,8 +16,6 @@ from cyberbattle.simulation import commandcontrol, model
 from marlon.baseline_models.env_wrappers.environment_event_source import IEnvironmentObserver, EnvironmentEventSource
 from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
 
-INVALID_ACTION_PENALTY = -1
-
 class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
     '''
     Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to attack.
@@ -31,17 +29,20 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         cyber_env: CyberBattleEnv,
         event_source: Optional[EnvironmentEventSource] = None,
         max_timesteps=2000,
-        enable_action_penalty=True):
+        invalid_action_reward=-1,
+        loss_reward=-5000):
 
         super().__init__()
         self.cyber_env: CyberBattleEnv = cyber_env
         self.bounds: EnvironmentBounds = self.cyber_env._bounds
         self.max_timesteps = max_timesteps
-        self.enable_action_penalty = enable_action_penalty
+        self.invalid_action_penalty = invalid_action_reward
+        self.loss_reward = loss_reward
 
         # These should be set during reset()
         self.timesteps = None
-        self.cyber_rewards = None
+        self.cyber_rewards = [] # The rewards as given by CyberBattle, before modification.
+        self.rewards = [] # The rewards returned by this wrapper, after modification.
 
         # Access protected members only in the ctor to avoid pylint warnings.
         self.node_count = cyber_env._CyberBattleEnv__node_count
@@ -189,28 +190,35 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
             translated_action = self.cyber_env.sample_valid_action(kinds=[0, 1, 2])
             self.invalid_action_count += 1
 
-            if self.enable_action_penalty:
-                reward_modifier = INVALID_ACTION_PENALTY
+            reward_modifier += self.invalid_action_penalty
         else:
             self.valid_action_count += 1
 
         observation, reward, done, info = self.cyber_env.step(translated_action)
         transformed_observation = self.transform_observation(observation)
+        self.cyber_rewards.append(reward)
+
         if done:
             logging.warning("Attacker Won")
+
         self.timesteps += 1
-        if self.reset_request or self.timesteps > self.max_timesteps:
+        if self.reset_request:
+            done = True
+
+        if self.timesteps > self.max_timesteps:
+            reward_modifier += self.loss_reward
             done = True
 
         reward += reward_modifier
-        self.cyber_rewards.append(reward)
+        self.rewards.append(reward)
 
         return transformed_observation, reward, done, info
 
     def reset(self) -> Observation:
         logging.info('Reset Attacker')
         if not self.reset_request:
-            self.event_source.notify_reset()
+            last_reward = self.rewards[-1] if len(self.rewards) > 0 else 0
+            self.event_source.notify_reset(last_reward)
 
         observation = self.cyber_env.reset()
 
@@ -219,10 +227,11 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         self.invalid_action_count = 0
         self.timesteps = 0
         self.cyber_rewards = []
+        self.rewards = []
 
         return self.transform_observation(observation)
 
-    def on_reset(self):
+    def on_reset(self, last_rewards):
         logging.info('on_reset Attacker')
         self.reset_request = True
 

@@ -63,6 +63,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         event_source.add_observer(self)
         assert defender is not None, "Attempting to use the defender environment without a defender present."
         self.defender: LearningDefender = LearningDefender(cyber_env)
+        self.__last_attacker_reward = None
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         """Creates a compatible version of the attackers observation space."""
@@ -129,7 +130,11 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         defender_observation = self.observe()
         self.timesteps += 1
 
-        done = self.reset_request or self.timesteps > self.max_timesteps or done
+        if self.reset_request:
+            done = True
+            reward = -1*self.__last_attacker_reward
+        else:
+            done = self.timesteps > self.max_timesteps
 
         self.rewards.append(reward)
         return defender_observation, reward, done, {}
@@ -224,11 +229,12 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
     def reset(self) -> Observation:
         logging.info('Reset Defender')
         if not self.reset_request:
-            self.event_source.notify_reset()
+            self.event_source.notify_reset(last_reward=0)
 
         self.cyber_env.reset()
 
         self.reset_request = False
+        self.__last_attacker_reward = None
         self.rewards = []
         self.timesteps = 0
         self.valid_action_count = 0
@@ -236,9 +242,10 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
 
         return self.observe()
 
-    def on_reset(self):
+    def on_reset(self, last_reward):
         logging.info('on_reset Defender')
         self.reset_request = True
+        self.__last_attacker_reward = last_reward
 
     def get_blank_defender_observation(self):
         """ Creates a empty defender observation. """
