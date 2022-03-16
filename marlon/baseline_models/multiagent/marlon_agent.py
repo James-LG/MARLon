@@ -7,6 +7,7 @@ from stable_baselines3.common.type_aliases import GymEnv
 
 
 class MarlonAgent(ABC):
+    '''Common interface for agents used in MARL algorithms.'''
 
     @property
     @abstractmethod
@@ -16,16 +17,12 @@ class MarlonAgent(ABC):
     @property
     @abstractmethod
     def env(self) -> GymEnv:
+        '''The environment this agent will train on.'''
         raise NotImplementedError
 
     @property
     @abstractmethod
     def num_timesteps(self) -> int:
-        raise NotImplementedError
-
-    @num_timesteps.setter
-    @abstractmethod
-    def num_timesteps(self, value):
         raise NotImplementedError
 
     @property
@@ -51,10 +48,20 @@ class MarlonAgent(ABC):
 
     @abstractmethod
     def learn(self, total_timesteps: int, n_eval_episodes: int):
-        """
+        '''
+        Train all agents in the universe for the specified amount of steps or episodes,
+        which ever comes first.
+
         Use only for single-agent learning.
         For multi-agent learning you must use marl_algorithm functions.
-        """
+
+        Parameters
+        ----------
+        total_timesteps : int
+            The maximum number of timesteps to train for, across all episodes.
+        n_eval_episodes : int
+            The maximum number of episodes to train for, regardless of timesteps.
+        '''
         raise NotImplementedError
 
     @abstractmethod

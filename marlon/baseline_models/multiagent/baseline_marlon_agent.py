@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Any, Optional, Tuple, Type
 
@@ -17,15 +18,17 @@ from marlon.baseline_models.multiagent.marlon_agent import MarlonAgent
 from marlon.baseline_models.multiagent.multiagent_universe import AgentBuilder
 
 class BaselineAgentBuilder(AgentBuilder):
+    '''Assists in creating BaselineMarlonAgents.'''
+
     def __init__(self, alg_type: Type, policy: str):
         assert issubclass(alg_type, OnPolicyAlgorithm), "Algorithm type must inherit OnPolicyAlgorithm."
 
         self.alg_type = alg_type
         self.policy = policy
 
-    def build(self, wrapper: GymEnv) -> MarlonAgent:
+    def build(self, wrapper: GymEnv, logger: logging.Logger) -> MarlonAgent:
         model = self.alg_type(self.policy, Monitor(wrapper), verbose=1)
-        return BaselineMarlonAgent(model, wrapper)
+        return BaselineMarlonAgent(model, wrapper, logger)
 
 class LoadFileBaselineAgentBuilder(AgentBuilder):
     def __init__(self, alg_type: Type, file_path: str):
@@ -34,20 +37,21 @@ class LoadFileBaselineAgentBuilder(AgentBuilder):
         self.alg_type = alg_type
         self.model = self.alg_type.load(file_path)
 
-    def build(self, wrapper: GymEnv) -> MarlonAgent:
+    def build(self, wrapper: GymEnv, logger: logging.Logger) -> MarlonAgent:
         self.model.env = Monitor(wrapper)
-        return BaselineMarlonAgent(self.model, wrapper)
+        return BaselineMarlonAgent(self.model, wrapper, logger)
 
 class BaselineMarlonAgent(MarlonAgent):
-    def __init__(self, baseline_model: OnPolicyAlgorithm, wrapper):
+    def __init__(self, baseline_model: OnPolicyAlgorithm, wrapper, logger: logging.Logger):
         self.baseline_model: OnPolicyAlgorithm = baseline_model
         self.callback: BaseCallback = None
         self._wrapper = wrapper
+        self.logger = logger
     
     @property
     def wrapper(self):
         return self._wrapper
-    
+
     @property
     def rollout_buffer(self) -> RolloutBuffer:
         return self.baseline_model.rollout_buffer
@@ -58,12 +62,8 @@ class BaselineMarlonAgent(MarlonAgent):
 
     @property
     def num_timesteps(self) -> int:
+        '''Delegates to the baseline model's num_timesteps so it is always up to date.'''
         return self.baseline_model.num_timesteps
-
-    @num_timesteps.setter
-    def num_timesteps(self, value):
-        """ Ensure the baseline model's num_timesteps is always up to date. """
-        self.baseline_model.num_timesteps = value
 
     @property
     def n_rollout_steps(self) -> int:
@@ -99,7 +99,7 @@ class BaselineMarlonAgent(MarlonAgent):
 
         new_obs, rewards, dones, infos = self.env.step(clipped_actions)
 
-        self.num_timesteps += self.env.num_envs
+        self.baseline_model.num_timesteps += self.env.num_envs
 
         # Give access to local variables
         self.callback.update_locals(locals())
@@ -201,7 +201,7 @@ class BaselineMarlonAgent(MarlonAgent):
 
     def update_progress(self, total_timesteps: int):
         return self.baseline_model._update_current_progress_remaining(
-            self.num_timesteps,
+            self.baseline_model.num_timesteps,
             total_timesteps
         )
 
@@ -234,3 +234,4 @@ class BaselineMarlonAgent(MarlonAgent):
 
     def save(self, filepath: str):
         self.baseline_model.save(filepath)
+        self.logger.info('Saved baseline model at: %s', filepath)

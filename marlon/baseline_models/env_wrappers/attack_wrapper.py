@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -17,9 +18,7 @@ from marlon.baseline_models.env_wrappers.environment_event_source import IEnviro
 from marlon.baseline_models.env_wrappers.reward_store import IRewardStore
 
 class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
-    '''
-    Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to attack.
-    '''
+    """Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to attack."""
 
     nested_spaces = ['credential_cache_matrix', 'leaked_credentials']
     other_removed_spaces = ['connect']
@@ -215,7 +214,7 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         return transformed_observation, reward, done, info
 
     def reset(self) -> Observation:
-        logging.info('Reset Attacker')
+        logging.debug('Reset Attacker')
         if not self.reset_request:
             last_reward = self.rewards[-1] if len(self.rewards) > 0 else 0
             self.event_source.notify_reset(last_reward)

@@ -1,4 +1,11 @@
-from typing import Optional
+'''
+Functions to train an attacker and defender agents simultaneously.
+
+Functions in this module are taken from stable-baselines3 and modified to allow multi-agent learning.
+https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/on_policy_algorithm.py
+'''
+
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -10,19 +17,23 @@ def collect_rollouts(
     attacker_agent: MarlonAgent,
     defender_agent: MarlonAgent
 ) -> bool:
-    """
+    '''
     Collect experiences using the current policy and fill a ``RolloutBuffer``.
     The term rollout here refers to the model-free notion and should not
     be used with the concept of rollout used in model-based RL or planning.
 
-    :param env: The training environment
-    :param callback: Callback that will be called at each step
-        (and at the beginning and end of the rollout)
-    :param rollout_buffer: Buffer to fill with rollouts
-    :param n_steps: Number of experiences to collect per environment
-    :return: True if function returned with at least `n_rollout_steps`
+    Parameters
+    ----------
+    attacker_agent : MarlonAgent
+        The attacker agent to train.
+    defender_agent : MarlonAgent
+        The defender agent to train.
+
+    Returns
+    -------
+        True if function returned with at least `n_rollout_steps`
         collected, False if callback terminated rollout prematurely.
-    """
+    '''
     attacker_agent.on_rollout_start()
     defender_agent.on_rollout_start()
 
@@ -53,6 +64,33 @@ def learn(
     eval_log_path: Optional[str] = None,
     reset_num_timesteps: bool = True,
 ):
+    '''
+    Train an attacker and defender agent in a multi-agent scenario.
+
+    Parameters
+    ----------
+    attacker_agent : MarlonAgent
+        The attacker agent to train.
+    defender_agent : MarlonAgent
+        The defender agent to train.
+    total_timesteps : int
+        The total number of samples (env steps) to train on.
+    log_interval : int
+        The number of timesteps before logging.
+    eval_env : Optional[GymEnv]
+        Environment that will be used to evaluate the agent.
+    eval_freq : int
+        Evaluate the agent every ``eval_freq`` timesteps (this may vary a little).
+    n_eval_episodes : int
+        Number of episode to evaluate the agent.
+    tb_log_name : str
+        The name of the run for TensorBoard logging.
+    eval_log_path : Optional[str]
+        Path to a folder where the evaluations will be saved.
+    reset_num_timesteps : bool
+        Whether or not to reset the current timestep number (used in logging).
+    '''
+
     iteration = 0
 
     total_timesteps1 = attacker_agent.setup_learn(
@@ -95,11 +133,27 @@ def run_episode(
     attacker_agent: MarlonAgent,
     defender_agent: Optional[MarlonAgent],
     max_steps: int
-):
-    """
+) -> Tuple[List[float], List[float]]:
+    '''
     Runs an episode with two agents until max_steps is reached or the
     environment's done flag is set.
-    """
+
+    Parameters
+    ----------
+    attacker_agent : MarlonAgent
+        The attacker agent used to select offensive actions.
+    defender_agent : MarlonAgent
+        The defender agent used to select defensive actions.
+    max_steps : int
+        The max time steps before the episode is terminated.
+
+    Returns
+    -------
+    attacker_rewards : List[float]
+        The list of rewards at each time step for the attacker agent.
+    defender_rewards : List[float]
+        The list of rewards at each time step for the defender agent.
+    '''
     obs1 = attacker_agent.env.reset()
 
     if defender_agent:
