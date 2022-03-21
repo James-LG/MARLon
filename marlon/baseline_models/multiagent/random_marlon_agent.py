@@ -61,8 +61,16 @@ class RandomMarlonAgent(MarlonAgent):
     def n_rollout_steps(self) -> int:
         return self._n_rollout_steps
 
+    @property
+    def log_interval(self) -> int:
+        # This agent does not log, number is irrelevant.
+        return 1
+
     def predict(self, observation: np.ndarray) -> np.ndarray:
         return self.env.action_space.sample()
+
+    def post_predict_callback(self, observation, reward, done, info):
+        pass
 
     def perform_step(self, n_steps: int) -> Tuple[bool, Any, Any]:
         # Choose a random action and perform the step.
@@ -75,7 +83,7 @@ class RandomMarlonAgent(MarlonAgent):
         # We must simulate the behaviour.
         if done:
             self.env.reset()
-            self.episode_count+=1
+            self.episode_count += 1
 
         continue_training = self.episode_count < self.n_eval_episodes
 
@@ -113,7 +121,6 @@ class RandomMarlonAgent(MarlonAgent):
     def on_rollout_start(self):
         # Reset the environment.
         self.env.reset()
-        pass
 
     def on_rollout_end(self, new_obs: Any, dones: Any):
         # We don't do that here.

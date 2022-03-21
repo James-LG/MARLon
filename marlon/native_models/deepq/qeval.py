@@ -28,13 +28,13 @@ def evaluate():
         identifiers=gym_env.identifiers
     )
 
-    dql_run = torch.load('deepq.pkl')
+    model = torch.load('deepq.pkl')
 
     # Evaluate an agent that exploits the Q-function learnt above
     _ = learner.epsilon_greedy_search(
         gym_env,
         ep,
-        learner=dql_run['learner'],
+        learner=model,
         episode_count=eval_episode_count,
         iteration_count=iteration_count,
         epsilon=0.0,

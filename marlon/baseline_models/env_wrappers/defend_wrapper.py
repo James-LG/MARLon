@@ -131,8 +131,8 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         if self.reset_request:
             done = True
             reward = -1*self.__last_attacker_reward
-        else:
-            done = self.timesteps > self.max_timesteps
+        elif self.timesteps > self.max_timesteps:
+            done = True
 
         self.rewards.append(reward)
         return defender_observation, reward, done, {}

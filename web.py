@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request
-from marlon.simulate import SimulationCache, run_simulation
+from marlon.simulate import SimulationCache, simulate
 import plotly, json
 
 app = Flask(__name__)
@@ -18,43 +18,23 @@ def upload_file():
     attacker_option = request.form['attackerOptions']
     defender_option = request.form['defenderOptions']
 
-    if attacker_option == 'None':
-        if defender_option == 'None':
-            print('Attacker: None, Defender: None')
-        
-        elif defender_option == 'Random':
-            print('Attacker: None, Defender: Random')
+    attacker_file = None
+    if 'attackerFile' in request.files:
+        attacker_file = request.files['attackerFile'].filename
+    defender_file = None
+    if 'defenderFile' in request.files:
+        defender_file = request.files['defenderFile'].filename
 
-        elif defender_option == 'Load':
-            print('Attacker: None, Defender: Load')
-        
-    elif attacker_option == 'Random' :
-        if defender_option == 'None':
-            print('Attacker: Random, Defender: None')
+    SIMULATION.value = simulate(
+        timesteps=ITERATION_COUNT,
+        attacker_option=attacker_option,
+        defender_option=defender_option,
+        attacker_file=attacker_file,
+        defender_file=defender_file
+    )
 
-        elif defender_option == 'Random':
-            print('Attacker: Random, Defender: Random')
+    graphs = json.dumps(SIMULATION.value, cls=plotly.utils.PlotlyJSONEncoder)
+    return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(SIMULATION.value), graphs=graphs)
 
-        elif defender_option == 'Load':
-            print('Attacker: Random, Defender: Load')
-
-    elif attacker_option == 'Load':
-        if defender_option == 'None':
-            print('Attacker: Load, Defender: None')
-            
-        elif defender_option == 'Random':
-            print('Attacker: Load, Defender: Random')
-            if request.files['attackerFile']:
-                afile = request.files["attackerFile"]
-            else:
-                print("Missing Attacker File")
-                return render_template('index.html', max_sim=0, num_graphs=0, graphs=[])
-                
-            SIMULATION.value = run_simulation(ITERATION_COUNT, afile.filename)
-            graphs = json.dumps(SIMULATION.value, cls=plotly.utils.PlotlyJSONEncoder)
-            return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(SIMULATION.value), graphs=graphs)
-        
-        elif defender_option == 'Load':
-            print('Attacker: Load, Defender: Load')
-
-    return render_template('index.html', max_sim=0, num_graphs=0, graphs=[])
+if __name__ == "__main__":
+    app.run(host='localhost', port=5000)

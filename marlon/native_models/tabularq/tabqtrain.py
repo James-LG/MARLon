@@ -48,7 +48,7 @@ def train():
     title="Tabular Q-learning"
 )
 
-    torch.save(tabularq_run, 'tabularq.pkl')
+    torch.save(tabularq_run['learner'], 'tabularq.pkl')
 
 if __name__ == "__main__":
     train()
