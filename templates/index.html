@@ -80,28 +80,89 @@
             top:1px;
         }
         
+        .tab {
+        overflow: hidden;
+        background-color: #242424;
+        }
+
+        .tab button {
+        background-color: inherit;
+        float: left;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        padding: 14px 16px;
+        transition: 0.3s;
+        color: #c9d1d9;
+        }
+
+        .tab button:hover {
+        background-color: #ddd;
+        }
+
+        .tab button.active {
+        background-color: #3a3b3d;
+        }
+
+        .tabcontent {
+        display: none;
+        padding: 6px;
+        border-top: none;
+        background-color: #3a3b3d;
+        }
 
     </style>
     <body style="background-color: rgb(44, 43, 43);">
         <div class="d1">
         <span style="color: #c9d1d9;">
             <h1>MARLon</h1>
-            <h2><span style="color:rgb(126, 17, 17);">Attacker ID: XXXX</span> &emsp; <span style="color: blue;">Defender ID: XXXX</span> &emsp; Current Score: <span id="spnScore">-</span></h2>
+            <h2><span id="attackerID" style="color:rgb(126, 17, 17);">Attacker ID: XXXX</span> &emsp; <span style="color: blue;">Defender ID: XXXX</span> &emsp; Current Score: <span id="spnScore">-</span></h2>
             <strong>Switch to: </strong><button class="button defender" id="btnView">Defender View</button>
             <br/><br/>
             <div id='chart' class='chart'”></div>
             <br/>
             
+            <h4>Agent Configurator</h4>
+            <div class="tab">
+                <button class="tablinks" onclick="openAgentConfig(event, 'Attacker')">Attacker</button>
+                <button class="tablinks" onclick="openAgentConfig(event, 'Defender')">Defender</button>
+            </div>
+
             <form action="/upload-file" method="POST" enctype="multipart/form-data">
-                <strong>Select Attacker File</strong>
-                <input type="file" class="custom-file-input" name="attackerFile" id="aFile">
-                <br/><br/>
-                <strong>Select Defender File</strong>
-                <input type="file" class="custom-file-input" name="defenderFile" id="dFile" disabled>
+                <div id="Attacker" class="tabcontent">
+                    <h4>Attacker</h4>
+                    <input type="radio" onclick="javascript:yesnoCheck('noAttacker');" name="attackerOptions" id="attackerNone" value="None" checked> None
+                    <input type="radio" onclick="javascript:yesnoCheck('noAttacker');" name="attackerOptions" id="attackerRandom" value="Random"> Random
+                    <input type="radio" onclick="javascript:yesnoCheck('attacker');" name="attackerOptions" id="attackerLoad" value="Load"> Load Trained Model
+                    <div id="ifYesAttacker" style="visibility:hidden">
+                        <br/>
+                        <strong>Select Attacker File</strong>
+                        <input type="file" class="custom-file-input" name="attackerFile" id="aFile">
+                        <br/>
+                    </div>
+
+                </div>
+
+                <div id="Defender" class="tabcontent">
+                    <h4>Defender</h4>
+                    <input type="radio" onclick="javascript:yesnoCheck('noDefender');" name="defenderOptions" id="defenderNone" value="None" checked> None
+                    <input type="radio" onclick="javascript:yesnoCheck('noDefender');" name="defenderOptions" id="defenderRandom" value="Random"> Random
+                    <input type="radio" onclick="javascript:yesnoCheck('defender');" name="defenderOptions" id="defenderLoad" value="Load"> Load Trained Model
+                    
+                    <div id="ifYesDefender" style="visibility:hidden">
+                        <br/>
+                        <strong>Select Defender File</strong>
+                        <input type="file" class="custom-file-input" name="defenderFile" id="dFile">
+                        <br/>
+                    </div>
+                </div>
+
+                <br/>
                 <button type="submit" class="button simulate">Simulate</button>
+                <br/>
             </form>
             <br/>
-    
+            
             <button id="btnPrevious" disabled>Previous</button>
             <span id="spnProgress"></span>
             <button id="btnNext">Next</button>
@@ -188,5 +249,39 @@
         updateGraph();
     }
     
+
+    function openAgentConfig(evt, agentName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+
+        tablinks = document.getElementsByClassName("tablinks");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+
+        document.getElementById(agentName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+    
+    function yesnoCheck(agent) {
+        if(agent == 'attacker'){
+            document.getElementById('ifYesAttacker').style.visibility = 'visible';
+        }
+        else if(agent == 'defender'){
+            document.getElementById('ifYesDefender').style.visibility = 'visible';
+        }
+        else if(agent == 'noAttacker'){
+            document.getElementById('ifYesAttacker').style.visibility = 'hidden';
+        }
+        else if(agent == 'noDefender'){
+            document.getElementById('ifYesDefender').style.visibility = 'hidden';
+        }
+    }
+
   </script>
+
 </html>
