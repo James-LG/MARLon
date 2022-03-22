@@ -41,9 +41,6 @@ def upload_file():
     elif attacker_option == 'Load':
         if defender_option == 'None':
             print('Attacker: Load, Defender: None')
-            
-        elif defender_option == 'Random':
-            print('Attacker: Load, Defender: Random')
             if request.files['attackerFile']:
                 afile = request.files["attackerFile"]
             else:
@@ -53,6 +50,9 @@ def upload_file():
             SIMULATION.value = run_simulation(ITERATION_COUNT, afile.filename)
             graphs = json.dumps(SIMULATION.value, cls=plotly.utils.PlotlyJSONEncoder)
             return render_template('index.html', max_sim=ITERATION_COUNT, num_graphs=len(SIMULATION.value), graphs=graphs)
+
+        elif defender_option == 'Random':
+            print('Attacker: Load, Defender: Random')
         
         elif defender_option == 'Load':
             print('Attacker: Load, Defender: Load')
