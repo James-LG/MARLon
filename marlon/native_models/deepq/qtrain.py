@@ -55,7 +55,7 @@ def train():
         title="DQL"
     )
 
-    torch.save(dql_run, 'deepq.pkl')
+    torch.save(dql_run['learner'], 'deepq.pkl')
 
 if __name__ == "__main__":
     train()

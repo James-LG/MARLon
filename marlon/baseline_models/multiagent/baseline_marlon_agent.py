@@ -3,6 +3,7 @@ import time
 from typing import Any, Optional, Tuple, Type
 
 import numpy as np
+from stable_baselines3 import A2C
 import torch as th
 
 import gym
@@ -69,9 +70,16 @@ class BaselineMarlonAgent(MarlonAgent):
     def n_rollout_steps(self) -> int:
         return self.baseline_model.n_steps
 
+    @property
+    def log_interval(self) -> int:
+        return 100 if isinstance(self.baseline_model, A2C) else 1
+
     def predict(self, observation: np.ndarray) -> np.ndarray:
         action, _ = self.baseline_model.predict(observation=observation)
         return action
+
+    def post_predict_callback(self, observation, reward, done, info):
+        pass
 
     def perform_step(self, n_steps: int) -> Tuple[bool, Any, Any]:
         if self.baseline_model.use_sde and self.baseline_model.sde_sample_freq > 0 and \

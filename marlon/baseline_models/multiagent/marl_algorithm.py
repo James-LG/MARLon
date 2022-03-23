@@ -5,13 +5,14 @@ Functions in this module are taken from stable-baselines3 and modified to allow 
 https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/on_policy_algorithm.py
 '''
 
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
 from stable_baselines3.common.type_aliases import GymEnv
 
-from marlon.baseline_models.multiagent.marlon_agent import MarlonAgent
+from marlon.baseline_models.multiagent.marlon_agent import EvaluationAgent, MarlonAgent
+from marlon.baseline_models.multiagent.simulation import generate_graph_json
 
 def collect_rollouts(
     attacker_agent: MarlonAgent,
@@ -56,7 +57,6 @@ def learn(
     attacker_agent: MarlonAgent,
     defender_agent: MarlonAgent,
     total_timesteps: int,
-    log_interval: int = 1,
     eval_env: Optional[GymEnv] = None,
     eval_freq: int = -1,
     n_eval_episodes: int = 5,
@@ -75,8 +75,6 @@ def learn(
         The defender agent to train.
     total_timesteps : int
         The total number of samples (env steps) to train on.
-    log_interval : int
-        The number of timesteps before logging.
     eval_env : Optional[GymEnv]
         Environment that will be used to evaluate the agent.
     eval_freq : int
@@ -119,8 +117,9 @@ def learn(
         defender_agent.update_progress(total_timesteps)
 
         # Display training infos
-        if log_interval is not None and iteration % log_interval == 0:
+        if iteration % attacker_agent.log_interval == 0:
             attacker_agent.log_training(iteration)
+        if iteration % defender_agent.log_interval == 0:
             defender_agent.log_training(iteration)
 
         attacker_agent.train()
@@ -130,22 +129,25 @@ def learn(
     defender_agent.on_training_end()
 
 def run_episode(
-    attacker_agent: MarlonAgent,
-    defender_agent: Optional[MarlonAgent],
-    max_steps: int
-) -> Tuple[List[float], List[float]]:
+    attacker_agent: EvaluationAgent,
+    defender_agent: Optional[EvaluationAgent],
+    max_steps: int,
+    is_simulation: bool = False
+) -> Tuple[List[float], List[float], Dict[str, List[any]]]:
     '''
     Runs an episode with two agents until max_steps is reached or the
     environment's done flag is set.
 
     Parameters
     ----------
-    attacker_agent : MarlonAgent
+    attacker_agent : EvaluationAgent
         The attacker agent used to select offensive actions.
-    defender_agent : MarlonAgent
+    defender_agent : EvaluationAgent
         The defender agent used to select defensive actions.
     max_steps : int
         The max time steps before the episode is terminated.
+    is_simulation : bool
+        Whether it should compile a simulation for this episodes' relevant steps.
 
     Returns
     -------
@@ -153,38 +155,73 @@ def run_episode(
         The list of rewards at each time step for the attacker agent.
     defender_rewards : List[float]
         The list of rewards at each time step for the defender agent.
+    simulation: Dict[str, List[any]]
+        None if is_simulation = False. A dictionary with 'attacker' and 'defender' simulation lists.
     '''
     obs1 = attacker_agent.env.reset()
 
     if defender_agent:
-        defender_agent.wrapper.on_reset()
+        defender_agent.wrapper.on_reset(0)
         obs2 = defender_agent.env.reset()
 
     attacker_rewards = []
     defender_rewards = []
+    
+    dones1 = False
+    dones2 = False
+
+    # Cyber env should be the same for both attacker and defender
+    cyber_env = attacker_agent.wrapper.cyber_env
 
     n_steps = 0
+
+    simulation = None
+    if is_simulation:
+        simulation = [generate_graph_json(cyber_env, n_steps+1, sum(attacker_rewards), sum(defender_rewards))]
+
     while n_steps < max_steps:
         action1 = attacker_agent.predict(observation=obs1)
-        obs1, rewards1, dones1, _ = attacker_agent.env.step(action1)
+        obs1, rewards1, dones1, info1 = attacker_agent.env.step(action1)
         if isinstance(rewards1, np.ndarray):
             rewards1 = rewards1[0]
 
+        attacker_agent.post_predict_callback(
+            observation=obs1,
+            reward=rewards1,
+            done=dones1,
+            info=info1,
+        )
+
         attacker_rewards.append(rewards1)
 
-        if defender_agent:
+        if not defender_agent:
+            # If there is a jump in the reward for this step, record it for UI display.
+            if is_simulation and (rewards1 > 0 or n_steps == max_steps-1):
+                simulation.append(generate_graph_json(cyber_env, n_steps+1, sum(attacker_rewards), sum(defender_rewards)))
+        else:
             action2 = defender_agent.predict(observation=obs2)
-            obs2, rewards2, dones2, _ = defender_agent.env.step(action2)
+            obs2, rewards2, dones2, info2 = defender_agent.env.step(action2)
             if isinstance(rewards2, np.ndarray):
                 rewards2 = rewards2[0]
 
+            defender_agent.post_predict_callback(
+                observation=obs2,
+                reward=rewards2,
+                done=dones2,
+                info=info2,
+            )
+
             defender_rewards.append(rewards2)
 
-            if dones1 or dones2:
-                break
-        else:
-            if dones1:
-                break
+            # If there is a jump in the reward for this step, record it for UI display.
+            if is_simulation and (rewards1 > 0 or rewards2 > 0 or n_steps == max_steps-1):
+                simulation.append(generate_graph_json(cyber_env, n_steps+1, sum(attacker_rewards), sum(defender_rewards)))
+
+        if dones1 or dones2:
+            if is_simulation:
+                simulation.append(generate_graph_json(cyber_env, n_steps+1, sum(attacker_rewards), sum(defender_rewards)))
+            break
+
         n_steps += 1
 
-    return attacker_rewards, defender_rewards
+    return attacker_rewards, defender_rewards, simulation

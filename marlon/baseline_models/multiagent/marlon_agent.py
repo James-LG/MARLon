@@ -5,20 +5,33 @@ import numpy as np
 
 from stable_baselines3.common.type_aliases import GymEnv
 
-
-class MarlonAgent(ABC):
-    '''Common interface for agents used in MARL algorithms.'''
+class EvaluationAgent(ABC):
+    '''
+    Common interface for agents that can be evaluated.
+    NOTE: Does not include training-related methods. See MarlonAgent instead.
+    '''
 
     @property
     @abstractmethod
-    def wrapper(self):
+    def wrapper(self) -> GymEnv:
         raise NotImplementedError
 
     @property
     @abstractmethod
     def env(self) -> GymEnv:
-        '''The environment this agent will train on.'''
+        '''The environment this agent will train and evaluate on.'''
         raise NotImplementedError
+
+    @abstractmethod
+    def predict(self, observation: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+    @abstractmethod
+    def post_predict_callback(self, observation, reward, done, info):
+        raise NotImplementedError
+
+class MarlonAgent(EvaluationAgent):
+    '''Common interface for agents used in MARL algorithms.'''
 
     @property
     @abstractmethod
@@ -30,8 +43,9 @@ class MarlonAgent(ABC):
     def n_rollout_steps(self) -> int:
         raise NotImplementedError
 
+    @property
     @abstractmethod
-    def predict(self, observation: np.ndarray) -> np.ndarray:
+    def log_interval(self) -> int:
         raise NotImplementedError
 
     @abstractmethod

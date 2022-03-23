@@ -28,13 +28,13 @@ def evaluate():
         identifiers=gym_env.identifiers
     )
 
-    tabq_run = torch.load('tabularq.pkl')
+    model = torch.load('tabularq.pkl')
 
     # Evaluate an agent that exploits the Q-function imported from tabularq.pkl
     _ = learner.epsilon_greedy_search(
         gym_env,
         ep,
-        learner=tabq_run['learner'],
+        learner=model['learner'],
         episode_count=eval_episode_count,
         iteration_count=iteration_count,
         epsilon=0.0,

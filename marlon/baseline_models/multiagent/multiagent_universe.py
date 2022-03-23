@@ -174,7 +174,7 @@ class MultiAgentUniverse:
         defender_rewards = []
 
         for _ in range(n_episodes):
-            episode_rewards1, episode_rewards2 = marl_algorithm.run_episode(
+            episode_rewards1, episode_rewards2, _ = marl_algorithm.run_episode(
                 attacker_agent=self.attacker_agent,
                 defender_agent=self.defender_agent,
                 max_steps=self.max_timesteps

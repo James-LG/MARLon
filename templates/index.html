@@ -178,7 +178,8 @@
         //  0(Attacker Graph)
         //  1(Defender Graph)
         //  2(Current Step in Graph)
-        //  3(Current Score)
+        //  3(Attacker Score)
+        //  4(Defender Score)
         Plotly.newPlot('chart',graphs[index][graphSelect],{});
         spnProgress.textContent = (graphs[index][2]) + '/' + (max_sim);
         return graphs[index][3];
