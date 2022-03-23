@@ -116,5 +116,13 @@
             "console": "integratedTerminal",
             "justMyCode": false
         },
+        {
+            "name": "Python: Testbed",
+            "type": "python",
+            "request": "launch",
+            "program": "testbed.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
     ]
 }
