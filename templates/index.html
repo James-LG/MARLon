@@ -182,6 +182,10 @@
         //  4(Defender Score)
         Plotly.newPlot('chart',graphs[index][graphSelect],{});
         spnProgress.textContent = (graphs[index][2]) + '/' + (max_sim);
+
+        if (defenderView){
+            return graphs[index][4];
+        }
         return graphs[index][3];
     }
 

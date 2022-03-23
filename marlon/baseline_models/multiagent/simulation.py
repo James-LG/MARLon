@@ -21,10 +21,13 @@ def getCompleteGraph(cyberbattle_env: CyberBattleEnv) -> FigureWidget:
     fig2 = make_subplots(rows=1, cols=1)
     fig.add_trace(go.Scatter(y=np.array(cyberbattle_env._CyberBattleEnv__episode_rewards).cumsum(),
         name='cumulative reward'), row=1, col=1)
-    traces, layout, layout2 = complete_network_as_plotly_traces(cyberbattle_env, xref="x2", yref="y2")
+    traces, traces2, layout, layout2 = complete_network_as_plotly_traces(cyberbattle_env, xref="x2", yref="y2")
     for trace in traces:
         fig.add_trace(trace, row=1, col=2)
+        
+    for trace in traces2:
         fig2.add_trace(trace, row=1, col=1)
+    
     fig.update_layout(layout)
     fig2.update_layout(layout2)
     return fig, fig2
@@ -124,6 +127,18 @@ def complete_network_as_plotly_traces(cyberbattle_env: CyberBattleEnv,xref: str 
         textposition="bottom center"
     )
 
+    trace_invisible_nodes = go.Scatter(
+        x=[c[0] for i, c in undiscovered_nodes],
+        y=[c[1] for i, c in undiscovered_nodes],
+        mode='markers+text',
+        name=' ',
+        marker=dict(symbol='circle-dot',
+            size=5,
+            color='#808080',
+            line=dict(color='rgb(229,236,246)', width=8)
+            )
+    )
+
     trace_discovered_nodes = go.Scatter(
         x=[c[0] for i, c in discovered_nodes],
         y=[c[1] for i, c in discovered_nodes],
@@ -145,9 +160,10 @@ def complete_network_as_plotly_traces(cyberbattle_env: CyberBattleEnv,xref: str 
             name=a.name
         ) for a in actions.EdgeAnnotation]
 
-    all_scatters = dummy_scatter_for_edge_legend + [trace_owned_nodes, trace_undiscovered_nodes, trace_discovered_nodes]
-
-    return (all_scatters, layout, layout2)
+    all_scatters = dummy_scatter_for_edge_legend + [trace_owned_nodes, trace_discovered_nodes, trace_invisible_nodes]
+    all_scatters2 = dummy_scatter_for_edge_legend + [trace_owned_nodes, trace_undiscovered_nodes, trace_discovered_nodes]
+    
+    return (all_scatters, all_scatters2, layout, layout2)
 
 def get_node_information(cyberbattle_env: CyberBattleEnv, node_id: model.NodeID) -> model.NodeInfo:
     """Print node information"""
