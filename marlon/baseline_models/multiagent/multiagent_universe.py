@@ -109,7 +109,7 @@ class MultiAgentUniverse:
                 event_source=event_source,
                 attacker_reward_store=attacker_wrapper,
                 max_timesteps=max_timesteps,
-                enable_action_penalty=defender_invalid_action_reward,
+                invalid_action_reward=defender_invalid_action_reward,
                 defender=True
             )
             defender_agent = defender_builder.build(defender_wrapper, logger)

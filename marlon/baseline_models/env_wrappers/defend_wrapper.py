@@ -36,7 +36,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         event_source: Optional[EnvironmentEventSource] = None,
         defender: bool = False,
         max_timesteps=100,
-        enable_action_penalty=True):
+        invalid_action_reward=0):
         super().__init__()
         self.defender = None
         self.cyber_env: CyberBattleEnv = cyber_env
@@ -53,6 +53,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         self.attacker_reward_store = attacker_reward_store
         self.first = True
         self.reset_request = False
+        self.invalid_action_penalty = invalid_action_reward
         # Add this object as an observer of the cyber env.
         if event_source is None:
             event_source = EnvironmentEventSource()
@@ -101,6 +102,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
 
     def step(self, action) -> Tuple[Observation, float, bool, Dict[str, Any]]:
         done = False
+        reward = 0
         # Check for action validity
         if not self.is_defender_action_valid(action):
             logging.info(f"Action chosen is outside action space. Defender will skip this turn. Action = {action}")
@@ -109,13 +111,12 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
             action = []
         else:
             self.valid_action_count += 1
+            reward += self.invalid_action_penalty
         self.defender.executeAction(action)
         # Take the reward gained this step from the attacker's step and invert it so the defender
         # loses more reward if the attacker succeeds.
         if self.attacker_reward_store.episode_rewards:
-            reward = -1*self.attacker_reward_store.episode_rewards[-1]
-        else:
-            reward = 0
+            reward += -1*self.attacker_reward_store.episode_rewards[-1]
 
         if self.defender_constraints_broken():
             reward = self.cyber_env._CyberBattleEnv__LOSING_REWARD
