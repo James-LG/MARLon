@@ -36,7 +36,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         event_source: Optional[EnvironmentEventSource] = None,
         defender: bool = False,
         max_timesteps=100,
-        enable_action_penalty=0):
+        invalid_action_reward=0):
         super().__init__()
         self.defender = None
         self.cyber_env: CyberBattleEnv = cyber_env
@@ -53,7 +53,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         self.attacker_reward_store = attacker_reward_store
         self.first = True
         self.reset_request = False
-        self.invalid_action_penalty = enable_action_penalty
+        self.invalid_action_penalty = invalid_action_reward
         # Add this object as an observer of the cyber env.
         if event_source is None:
             event_source = EnvironmentEventSource()
