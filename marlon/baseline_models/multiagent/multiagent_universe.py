@@ -52,7 +52,8 @@ class MultiAgentUniverse:
         defender_invalid_action_reward = -1,
         env_id: str = "CyberBattleToyCtf-v0",
         max_timesteps: int = 2000,
-        attacker_loss_reward: float = -5000.0):
+        attacker_loss_reward: float = -5000.0,
+        defender_loss_reward: float = -5000.0):
         '''
         Static factory method to create a MultiAgentUniverse with the given options.
 
@@ -85,7 +86,8 @@ class MultiAgentUniverse:
         if defender_builder:
             cyber_env = gym.make(
                 env_id,
-                defender_constraint=DefenderConstraint(maintain_sla=0.80))
+                defender_constraint=DefenderConstraint(maintain_sla=0.80),
+                losing_reward = defender_loss_reward)
         else:
             cyber_env = gym.make(env_id)
 
@@ -172,27 +174,37 @@ class MultiAgentUniverse:
 
         attacker_rewards = []
         defender_rewards = []
+        episode_steps = []
 
-        for _ in range(n_episodes):
+        for i in range(n_episodes):
+            self.logger.info(f'Evaluating episode {i+1} of {n_episodes}')
             episode_rewards1, episode_rewards2, _ = marl_algorithm.run_episode(
                 attacker_agent=self.attacker_agent,
                 defender_agent=self.defender_agent,
                 max_steps=self.max_timesteps
             )
 
-            attacker_rewards += episode_rewards1
+            attacker_rewards.append(sum(episode_rewards1))
+            episode_steps.append(len(episode_rewards1))
 
             if self.defender_agent:
-                defender_rewards += episode_rewards2
+                defender_rewards.append(sum(episode_rewards2))
 
         attacker_rewards = np.array(attacker_rewards)
         defender_rewards = np.array(defender_rewards)
+
+        mean_length = np.mean(episode_steps)
+        std_length = np.std(episode_steps)
 
         mean1 = np.mean(attacker_rewards)
         std_dev1 = np.std(attacker_rewards)
 
         self.logger.info('-----------------------')
         self.logger.info('| Evaluation Complete |')
+        self.logger.info('-----------------------')
+        self.logger.info('| Episode length:      |')
+        self.logger.info('|   mean: %.2f', mean_length)
+        self.logger.info('|   std_dev: %.2f', std_length)
         self.logger.info('-----------------------')
         self.logger.info('| Attacker:           |')
         self.logger.info('|   mean:    %.2f', mean1)
