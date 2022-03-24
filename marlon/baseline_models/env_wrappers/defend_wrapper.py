@@ -107,11 +107,12 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         if not self.is_defender_action_valid(action):
             logging.info(f"Action chosen is outside action space. Defender will skip this turn. Action = {action}")
             self.invalid_action_count += 1
+            reward += self.invalid_action_penalty
             # If the action is invalid, pass an empty list to the defender
             action = []
         else:
             self.valid_action_count += 1
-            reward += self.invalid_action_penalty
+        
         self.defender.executeAction(action)
         # Take the reward gained this step from the attacker's step and invert it so the defender
         # loses more reward if the attacker succeeds.
