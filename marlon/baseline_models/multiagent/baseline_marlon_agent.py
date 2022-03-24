@@ -40,7 +40,7 @@ class LoadFileBaselineAgentBuilder(AgentBuilder):
 
     def build(self, wrapper: GymEnv, logger: logging.Logger) -> MarlonAgent:
         model = self.alg_type.load(self.file_path)
-        model.env = Monitor(wrapper)
+        model.set_env(Monitor(wrapper))
         return BaselineMarlonAgent(model, wrapper, logger)
 
 class BaselineMarlonAgent(MarlonAgent):

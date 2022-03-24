@@ -10,8 +10,8 @@ from marlon.baseline_models.multiagent.random_marlon_agent import RandomAgentBui
 def main():
     attackers = {
         'random': RandomAgentBuilder(),
-        'tabularq': QCompatibilityAgentBuilder(learner=torch.load('tabularq.pkl')),
-        'deepq': QCompatibilityAgentBuilder(learner=torch.load('deepq.pkl')),
+        'tabularq': QCompatibilityAgentBuilder('tabularq.pkl'),
+        'deepq': QCompatibilityAgentBuilder('deepq.pkl'),
         'ppo': LoadFileBaselineAgentBuilder(PPO, 'ppo.zip'),
         'ppo_marl': LoadFileBaselineAgentBuilder(PPO, 'ppo_marl_attacker.zip'),
         'a2c': LoadFileBaselineAgentBuilder(A2C, 'a2c.zip'),
@@ -28,13 +28,16 @@ def main():
     }
 
     universe = MultiAgentUniverse.build(
-        attacker_builder=attackers['random'],
+        attacker_builder=attackers['ppo'],
         attacker_invalid_action_reward=0,
-        defender_builder=defenders['none'],
+        defender_builder=BaselineAgentBuilder(
+            PPO,
+            'MultiInputPolicy'
+        ),
         defender_invalid_action_reward=0,
     )
 
-    universe.evaluate(5)
+    universe.learn(5000, 5)
 
 if __name__ == "__main__":
     main()
