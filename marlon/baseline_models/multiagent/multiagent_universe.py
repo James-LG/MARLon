@@ -86,7 +86,7 @@ class MultiAgentUniverse:
         if defender_builder:
             cyber_env = gym.make(
                 env_id,
-                defender_constraint=DefenderConstraint(maintain_sla=0.80),
+                defender_constraint=DefenderConstraint(maintain_sla=0.60),
                 losing_reward = defender_loss_reward)
         else:
             cyber_env = gym.make(env_id)

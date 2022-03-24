@@ -27,14 +27,18 @@ def main():
         'a2c_marl': LoadFileBaselineAgentBuilder(A2C, 'a2c_marl_defender.zip'),
     }
 
-    universe = MultiAgentUniverse.build(
-        attacker_builder=attackers['random'],
-        attacker_invalid_action_reward=0,
-        defender_builder=defenders['none'],
-        defender_invalid_action_reward=0,
-    )
+    for attacker_name, attacker_builder in attackers.items():
+        for defender_name, defender_builder in defenders.items():
+            print('+++++++++++++++++++')
+            print(f'Attacker: {attacker_name}; Defender: {defender_name}')
+            universe = MultiAgentUniverse.build(
+                attacker_builder=attacker_builder,
+                attacker_invalid_action_reward=0,
+                defender_builder=defender_builder,
+                defender_invalid_action_reward=0,
+            )
 
-    universe.evaluate(5)
+            universe.evaluate(5)
 
 if __name__ == "__main__":
     main()
