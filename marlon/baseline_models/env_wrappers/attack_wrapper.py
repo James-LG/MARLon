@@ -205,7 +205,6 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
             done = True
 
         if self.timesteps > self.max_timesteps:
-            reward_modifier += self.loss_reward
             done = True
 
         reward += reward_modifier
