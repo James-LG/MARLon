@@ -8,6 +8,7 @@ from stable_baselines3.common.monitor import Monitor
 
 from cyberbattle.agents.baseline.agent_wrapper import ActionTrackingStateAugmentation, AgentWrapper
 from cyberbattle._env.cyberbattle_env import CyberBattleEnv, EnvironmentBounds
+import torch
 from marlon.baseline_models.env_wrappers.attack_wrapper import AttackerEnvWrapper
 
 from marlon.baseline_models.multiagent.marlon_agent import EvaluationAgent, MarlonAgent
@@ -17,13 +18,13 @@ class QCompatibilityAgentBuilder(AgentBuilder):
     '''Assists in building RandomMarlonAgents.'''
 
     def __init__(self,
-        learner,
+        file_path,
         maximum_node_count: int = 12,
         maximum_total_credentials: int = 10) -> None:
         # TODO: There must be a better way of getting the max parameters above.
         #       Extracting it straight out of the cyber env maybe?
 
-        self.learner = learner
+        self.file_path = file_path
         self.maximum_node_count = maximum_node_count
         self.maximum_total_credentials = maximum_total_credentials
 
@@ -41,10 +42,11 @@ class QCompatibilityAgentBuilder(AgentBuilder):
             cyber_env,
             ActionTrackingStateAugmentation(environment_properties, cyber_env.reset()))
 
+        learner = torch.load(self.file_path)
         return QCompatibilityAgent(
             attacker_wrapper=wrapper,
             agent_wrapper=agent_env,
-            learner=self.learner
+            learner=learner
         )
 
 class QCompatibilityAgent(EvaluationAgent):

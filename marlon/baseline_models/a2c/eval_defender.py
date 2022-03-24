@@ -2,7 +2,7 @@ from stable_baselines3 import A2C
 from marlon.baseline_models.multiagent.baseline_marlon_agent import LoadFileBaselineAgentBuilder
 from marlon.baseline_models.multiagent.multiagent_universe import MultiAgentUniverse
 from marlon.baseline_models.multiagent.random_marlon_agent import RandomAgentBuilder
-from marlon.baseline_models.ppo.train_defender import DEFENDER_SAVE_PATH
+from marlon.baseline_models.a2c.train_defender import DEFENDER_SAVE_PATH
 
 EVALUATE_EPISODES = 5
 
