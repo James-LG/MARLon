@@ -1,3 +1,4 @@
+import math
 from typing import Any, Dict, Optional, Tuple, TypedDict
 import boolean
 import logging
@@ -21,7 +22,8 @@ from marlon.defender_agents.defender import LearningDefender
 Defender_Observation = TypedDict('Defender_Observation', {'infected_nodes': np.ndarray,
                                                           'incoming_firewall_status':np.ndarray,
                                                           'outgoing_firewall_status':np.ndarray,
-                                                          'services_status':np.ndarray})
+                                                          'services_status':np.ndarray,
+                                                          'network_availability':int})
 class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
     """Wraps a CyberBattleEnv for stablebaselines-3 models to learn how to defend."""
 
@@ -69,11 +71,12 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         for _, node in model.iterate_network_nodes(cyber_env.environment.network):
             for _ in node.services:
                 self.num_services +=1
-        # All spaces are MultiBinary.
+        # All spaces are MultiBinary except the network availability which is 0-100.
         return spaces.Dict({'infected_nodes': spaces.MultiBinary(len(list(cyber_env.environment.network.nodes))),
                             'incoming_firewall_status': spaces.MultiBinary(len(self.firewall_rule_list)*len(list(cyber_env.environment.network.nodes))),
                             'outgoing_firewall_status': spaces.MultiBinary(len(self.firewall_rule_list)*len(list(cyber_env.environment.network.nodes))),
-                            'services_status': spaces.MultiBinary(self.num_services)})
+                            'services_status': spaces.MultiBinary(self.num_services),
+                            'network_availability': spaces.Discrete(100)})
 
     def __create_defender_action_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         # 0th index of the action defines which action to use (reimage, block_traffic, allow_traffic, stop_service, start_service)
@@ -250,7 +253,8 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         obs = Defender_Observation(infected_nodes = [],
                                     incoming_firewall_status=[],
                                     outgoing_firewall_status=[],
-                                    services_status=[])
+                                    services_status=[],
+                                    network_availability=100)
         return obs
 
     def observe(self) -> Defender_Observation:
@@ -295,6 +299,8 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         new_observation['outgoing_firewall_status'] = np.array(outgoing_firewall_list)
         # Lists all possible services, 1 if active, 0 if not.
         new_observation['services_status'] = np.array(all_services_list)
+        # Gets the current network availability, rounds it down, then add it to the observation.
+        new_observation['network_availability'] = math.floor(self.cyber_env._defender_actuator.network_availability)
         return new_observation
 
     def set_reset_request(self, reset_request):
