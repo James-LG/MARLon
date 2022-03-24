@@ -36,11 +36,12 @@ class LoadFileBaselineAgentBuilder(AgentBuilder):
         assert issubclass(alg_type, OnPolicyAlgorithm), "Algorithm type must inherit OnPolicyAlgorithm."
 
         self.alg_type = alg_type
-        self.model = self.alg_type.load(file_path)
+        self.file_path = file_path
 
     def build(self, wrapper: GymEnv, logger: logging.Logger) -> MarlonAgent:
-        self.model.env = Monitor(wrapper)
-        return BaselineMarlonAgent(self.model, wrapper, logger)
+        model = self.alg_type.load(self.file_path)
+        model.env = Monitor(wrapper)
+        return BaselineMarlonAgent(model, wrapper, logger)
 
 class BaselineMarlonAgent(MarlonAgent):
     def __init__(self, baseline_model: OnPolicyAlgorithm, wrapper, logger: logging.Logger):

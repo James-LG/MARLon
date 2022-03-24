@@ -53,7 +53,8 @@ class MultiAgentUniverse:
         env_id: str = "CyberBattleToyCtf-v0",
         max_timesteps: int = 2000,
         attacker_loss_reward: float = -5000.0,
-        defender_loss_reward: float = -5000.0):
+        defender_loss_reward: float = -5000.0,
+        defender_maintain_sla: float = 0.60):
         '''
         Static factory method to create a MultiAgentUniverse with the given options.
 
@@ -86,7 +87,7 @@ class MultiAgentUniverse:
         if defender_builder:
             cyber_env = gym.make(
                 env_id,
-                defender_constraint=DefenderConstraint(maintain_sla=0.60),
+                defender_constraint=DefenderConstraint(maintain_sla=defender_maintain_sla),
                 losing_reward = defender_loss_reward)
         else:
             cyber_env = gym.make(env_id)

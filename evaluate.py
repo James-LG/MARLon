@@ -1,7 +1,7 @@
 
 from stable_baselines3 import A2C, PPO
 import torch
-from marlon.baseline_models.multiagent.baseline_marlon_agent import BaselineAgentBuilder, LoadFileBaselineAgentBuilder
+from marlon.baseline_models.multiagent.baseline_marlon_agent import LoadFileBaselineAgentBuilder
 from marlon.baseline_models.multiagent.multiagent_universe import MultiAgentUniverse
 from marlon.baseline_models.multiagent.qcompat_agent import QCompatibilityAgentBuilder
 from marlon.baseline_models.multiagent.random_marlon_agent import RandomAgentBuilder
@@ -10,8 +10,8 @@ from marlon.baseline_models.multiagent.random_marlon_agent import RandomAgentBui
 def main():
     attackers = {
         'random': RandomAgentBuilder(),
-        'tabularq': QCompatibilityAgentBuilder(learner=torch.load('tabularq.pkl')),
-        'deepq': QCompatibilityAgentBuilder(learner=torch.load('deepq.pkl')),
+        'tabularq': QCompatibilityAgentBuilder('tabularq.pkl'),
+        'deepq': QCompatibilityAgentBuilder('deepq.pkl'),
         'ppo': LoadFileBaselineAgentBuilder(PPO, 'ppo.zip'),
         'ppo_marl': LoadFileBaselineAgentBuilder(PPO, 'ppo_marl_attacker.zip'),
         'a2c': LoadFileBaselineAgentBuilder(A2C, 'a2c.zip'),
@@ -31,14 +31,18 @@ def main():
         for defender_name, defender_builder in defenders.items():
             print('+++++++++++++++++++')
             print(f'Attacker: {attacker_name}; Defender: {defender_name}')
-            universe = MultiAgentUniverse.build(
-                attacker_builder=attacker_builder,
-                attacker_invalid_action_reward=0,
-                defender_builder=defender_builder,
-                defender_invalid_action_reward=0,
-            )
+            try:
+                universe = MultiAgentUniverse.build(
+                    attacker_builder=attacker_builder,
+                    attacker_invalid_action_reward=0,
+                    defender_builder=defender_builder,
+                    defender_invalid_action_reward=0,
+                )
 
-            universe.evaluate(5)
+                universe.evaluate(5)
+            except Exception as e:
+                print('FAILED TO LOAD AGENTS')
+                print(e)
 
 if __name__ == "__main__":
     main()
