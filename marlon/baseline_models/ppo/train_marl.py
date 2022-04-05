@@ -6,7 +6,8 @@ from marlon.baseline_models.multiagent.multiagent_universe import MultiAgentUniv
 ENV_MAX_TIMESTEPS = 1500
 LEARN_TIMESTEPS = 300_000
 LEARN_EPISODES = 10000 # Set this to a large value to stop at LEARN_TIMESTEPS instead.
-ATTACKER_INVALID_ACTION_REWARD = -1
+ATTACKER_INVALID_ACTION_REWARD_MODIFIER = 0
+ATTACKER_INVALID_ACTION_REWARD_MULTIPLIER = 0
 DEFENDER_INVALID_ACTION_REWARD = -1
 EVALUATE_EPISODES = 5
 ATTACKER_SAVE_PATH = 'ppo_marl_attacker.zip'
@@ -23,7 +24,8 @@ def train(evaluate_after=False):
             alg_type=PPO,
             policy='MultiInputPolicy'
         ),
-        attacker_invalid_action_reward_modifier=ATTACKER_INVALID_ACTION_REWARD,
+        attacker_invalid_action_reward_modifier=ATTACKER_INVALID_ACTION_REWARD_MODIFIER,
+        attacker_invalid_action_reward_multiplier=ATTACKER_INVALID_ACTION_REWARD_MULTIPLIER,
         defender_invalid_action_reward_modifier=DEFENDER_INVALID_ACTION_REWARD
     )
 

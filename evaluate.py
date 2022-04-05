@@ -1,4 +1,5 @@
 
+from time import sleep
 from typing import Dict
 import csv
 from stable_baselines3 import A2C, PPO
@@ -25,13 +26,23 @@ def write_csv(results: Dict[str, Dict[str, EvalutionStats]]):
                 stats.mean_defender_valid, stats.std_defender_valid,
                 stats.mean_defender_invalid, stats.std_defender_invalid,])
 
-    with open('eval_results.csv', 'w', encoding='UTF-8') as csvfile:
-        csvwriter = csv.writer(csvfile)
+    notified_wait = False
+    while True:
+        try:
+            with open('eval_results.csv', 'w', encoding='UTF-8') as csvfile:
+                csvwriter = csv.writer(csvfile)
 
-        csvwriter.writerow(['', '', 'Episode Length', '', 'Attacker Score', '', 'Attacker Valid Actions', '', 'Attacker Invalid Actions', '', 'Defender Score', '', 'Defender Valid Actions', '', 'Defender Invalid Actions', ''])
-        csvwriter.writerow(['Attacker', 'Defender', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', ])
+                csvwriter.writerow(['', '', 'Episode Length', '', 'Attacker Score', '', 'Attacker Valid Actions', '', 'Attacker Invalid Actions', '', 'Defender Score', '', 'Defender Valid Actions', '', 'Defender Invalid Actions', ''])
+                csvwriter.writerow(['Attacker', 'Defender', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', 'Mean', 'Std. Dev', ])
 
-        csvwriter.writerows(rows)
+                csvwriter.writerows(rows)
+                break
+        except PermissionError:
+            if not notified_wait:
+                print('Waiting for access to file')
+                notified_wait = True
+
+            sleep(10)
 
     print('Done!')
 
@@ -43,6 +54,7 @@ def main():
         'deepq': QCompatibilityAgentBuilder('deepq.pkl'),
         'ppo': LoadFileBaselineAgentBuilder(PPO, 'ppo.zip'),
         'ppo_marl': LoadFileBaselineAgentBuilder(PPO, 'ppo_marl_attacker.zip'),
+        'ppo_marl_no_reset': LoadFileBaselineAgentBuilder(PPO, 'ppo_marl_no_reset.zip'),
         'a2c': LoadFileBaselineAgentBuilder(A2C, 'a2c.zip'),
         'a2c_marl': LoadFileBaselineAgentBuilder(A2C, 'a2c_marl_attacker.zip'),
     }
@@ -52,6 +64,7 @@ def main():
         'random': RandomAgentBuilder(),
         'ppo': LoadFileBaselineAgentBuilder(PPO, 'ppo_defender.zip'),
         'ppo_marl': LoadFileBaselineAgentBuilder(PPO, 'ppo_marl_defender.zip'),
+        'ppo_marl_no_reset': LoadFileBaselineAgentBuilder(PPO, 'ppo_marl_defender_no_reset.zip'),
         'a2c': LoadFileBaselineAgentBuilder(A2C, 'a2c_defender.zip'),
         'a2c_marl': LoadFileBaselineAgentBuilder(A2C, 'a2c_marl_defender.zip'),
     }
