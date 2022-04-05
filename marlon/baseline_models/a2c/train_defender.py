@@ -20,8 +20,8 @@ def train(evaluate_after=False):
             alg_type=A2C,
             policy='MultiInputPolicy'
         ),
-        attacker_invalid_action_reward=ATTACKER_INVALID_ACTION_REWARD,
-        defender_invalid_action_reward=DEFENDER_INVALID_ACTION_REWARD
+        attacker_invalid_action_reward_modifier=ATTACKER_INVALID_ACTION_REWARD,
+        defender_invalid_action_reward_modifier=DEFENDER_INVALID_ACTION_REWARD
     )
 
     universe.learn(

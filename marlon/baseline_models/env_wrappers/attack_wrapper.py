@@ -6,7 +6,7 @@ import numpy as np
 from plotly.missing_ipywidgets import FigureWidget
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import logging
+
 import gym
 from gym import spaces
 from gym.spaces.space import Space
@@ -28,14 +28,16 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         cyber_env: CyberBattleEnv,
         event_source: Optional[EnvironmentEventSource] = None,
         max_timesteps=2000,
-        invalid_action_reward=-1,
+        invalid_action_reward_modifier=-1,
+        invalid_action_reward_multiplier=1,
         loss_reward=-5000):
 
         super().__init__()
         self.cyber_env: CyberBattleEnv = cyber_env
         self.bounds: EnvironmentBounds = self.cyber_env._bounds
         self.max_timesteps = max_timesteps
-        self.invalid_action_penalty = invalid_action_reward
+        self.invalid_action_reward_modifier = invalid_action_reward_modifier
+        self.invalid_action_reward_multiplier = invalid_action_reward_multiplier
         self.loss_reward = loss_reward
 
         # These should be set during reset()
@@ -184,12 +186,14 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
         # If the action is still invalid, sample a random valid action.
         # TODO: Try invalid action masks instead of sampling a random valid action; 'Dynamic action spaces'.
         # https://sb3-contrib.readthedocs.io/en/master/modules/ppo_mask.html
+        is_invalid = False
         if not self.cyber_env.is_action_valid(translated_action):
             # sample local and remote actions only (excludes connect action)
             translated_action = self.cyber_env.sample_valid_action(kinds=[0, 1, 2])
             self.invalid_action_count += 1
 
-            reward_modifier += self.invalid_action_penalty
+            reward_modifier += self.invalid_action_reward_modifier
+            is_invalid = True
         else:
             self.valid_action_count += 1
 
@@ -206,6 +210,10 @@ class AttackerEnvWrapper(gym.Env, IRewardStore, IEnvironmentObserver):
 
         if self.timesteps > self.max_timesteps:
             done = True
+
+        # If action was invalid, multiplier is applied before reward modifier
+        if is_invalid:
+            reward = reward * self.invalid_action_reward_multiplier
 
         reward += reward_modifier
         self.rewards.append(reward)

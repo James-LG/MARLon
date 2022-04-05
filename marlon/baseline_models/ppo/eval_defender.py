@@ -14,7 +14,7 @@ def evaluate():
             alg_type=PPO,
             file_path=DEFENDER_SAVE_PATH
         ),
-        attacker_invalid_action_reward=0
+        attacker_invalid_action_reward_modifier=0
     )
 
     universe.evaluate(
