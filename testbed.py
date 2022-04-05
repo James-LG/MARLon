@@ -28,16 +28,13 @@ def main():
     }
 
     universe = MultiAgentUniverse.build(
-        attacker_builder=attackers['ppo'],
-        attacker_invalid_action_reward=0,
-        defender_builder=BaselineAgentBuilder(
-            PPO,
-            'MultiInputPolicy'
-        ),
-        defender_invalid_action_reward=0,
+        attacker_builder=attackers['random'],
+        attacker_invalid_action_reward_modifier=0,
+        defender_builder=defenders['none'],
+        defender_invalid_action_reward_modifier=0,
     )
 
-    universe.learn(5000, 5)
+    universe.evaluate(5)
 
 if __name__ == "__main__":
     main()

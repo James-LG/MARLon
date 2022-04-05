@@ -21,8 +21,8 @@ def simulate(timesteps, attacker_option, defender_option, attacker_file, defende
     universe = MultiAgentUniverse.build(
         attacker_builder=attacker_builder,
         defender_builder=defender_builder,
-        attacker_invalid_action_reward=0,
-        defender_invalid_action_reward=0
+        attacker_invalid_action_reward_modifier=0,
+        defender_invalid_action_reward_modifier=0
     )
 
     _, _, simulation = marl_algorithm.run_episode(
