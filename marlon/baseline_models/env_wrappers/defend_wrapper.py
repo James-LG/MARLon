@@ -36,7 +36,9 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         event_source: Optional[EnvironmentEventSource] = None,
         defender: bool = False,
         max_timesteps=100,
-        invalid_action_reward=0):
+        invalid_action_reward=0,
+        reset_on_constraint_broken = True):
+
         super().__init__()
         self.defender = None
         self.cyber_env: CyberBattleEnv = cyber_env
@@ -63,6 +65,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         assert defender is not None, "Attempting to use the defender environment without a defender present."
         self.defender: LearningDefender = LearningDefender(cyber_env)
         self.__last_attacker_reward = None
+        self.reset_on_constraint_broken = reset_on_constraint_broken
 
     def __create_observation_space(self, cyber_env: CyberBattleEnv) -> gym.Space:
         """Creates a compatible version of the attackers observation space."""
@@ -122,7 +125,8 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         if self.defender_constraints_broken():
             reward = self.cyber_env._CyberBattleEnv__LOSING_REWARD
             logging.warning("Defender Lost")
-            done = True
+            if self.reset_on_constraint_broken:
+                done = True
         if self.cyber_env._CyberBattleEnv__defender_goal_reached():
             reward = self.cyber_env._CyberBattleEnv__WINNING_REWARD
             done = True
