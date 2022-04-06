@@ -41,7 +41,7 @@ class AgentBuilder(ABC):
 
 class MultiAgentUniverse:
     '''
-    Helps build multi-agent environments by handling intracacies of various
+    Helps build multi-agent environments by handling intricacies of various
     combinations of attacker and defender agents.
     '''
 
@@ -56,7 +56,8 @@ class MultiAgentUniverse:
         max_timesteps: int = 2000,
         attacker_loss_reward: float = -5000.0,
         defender_loss_reward: float = -5000.0,
-        defender_maintain_sla: float = 0.60):
+        defender_maintain_sla: float = 0.60,
+        defender_reset_on_constraint_broken: bool = True):
         '''
         Static factory method to create a MultiAgentUniverse with the given options.
 
@@ -83,6 +84,8 @@ class MultiAgentUniverse:
             Reward applied to the defender if it loses.
         defender_maintain_sla : float
             The network availability constraint for the defender.
+        defender_reset_on_constraint_broken : bool
+            Controls if the environment gets reset when the defender breaks its constraint.
 
         Returns
         -------
@@ -122,7 +125,8 @@ class MultiAgentUniverse:
                 attacker_reward_store=attacker_wrapper,
                 max_timesteps=max_timesteps,
                 invalid_action_reward=defender_invalid_action_reward_modifier,
-                defender=True
+                defender=True,
+                reset_on_constraint_broken=defender_reset_on_constraint_broken
             )
             defender_agent = defender_builder.build(defender_wrapper, logger)
 
