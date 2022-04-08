@@ -161,7 +161,7 @@ def complete_network_as_plotly_traces(cyberbattle_env: CyberBattleEnv,xref: str 
         ) for a in actions.EdgeAnnotation]
 
     all_scatters = dummy_scatter_for_edge_legend + [trace_owned_nodes, trace_discovered_nodes, trace_invisible_nodes]
-    all_scatters2 = dummy_scatter_for_edge_legend + [trace_owned_nodes, trace_undiscovered_nodes, trace_discovered_nodes]
+    all_scatters2 = [trace_owned_nodes, trace_undiscovered_nodes, trace_discovered_nodes]
     
     return (all_scatters, all_scatters2, layout, layout2)
 

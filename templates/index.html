@@ -116,7 +116,9 @@
         <div class="d1">
         <span style="color: #c9d1d9;">
             <h1>MARLon</h1>
-            <h2><span id="attackerID" style="color:rgb(126, 17, 17);">Attacker ID: XXXX</span> &emsp; <span style="color: blue;">Defender ID: XXXX</span> &emsp; Current Score: <span id="spnScore">-</span></h2>
+            <h2><span style="color:rgb(126, 17, 17);">Attacker ID: {{attacker_name}}</span>&emsp; 
+                <span style="color: blue;">Defender ID: {{defender_name}}</span> &emsp; 
+                Current Score: <span id="spnScore">-</span></h2>
             <strong>Switch to: </strong><button class="button defender" id="btnView">Defender View</button>
             <br/><br/>
             <div id='chart' class='chart'”></div>
@@ -210,7 +212,6 @@
 
     var index = 0;
     var graphSelect = 0;
-
 
     var spnProgress = document.getElementById("spnProgress");
     var spnScore = document.getElementById('spnScore');
