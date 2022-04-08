@@ -9,6 +9,7 @@ LEARN_TIMESTEPS = 300_000
 LEARN_EPISODES = 10000 # Set this to a large value to stop at LEARN_TIMESTEPS instead.
 ATTACKER_INVALID_ACTION_REWARD = -1
 DEFENDER_INVALID_ACTION_REWARD = -1
+DEFENDER_RESET_ON_CONSTRAINT_BROKEN = False
 EVALUATE_EPISODES = 5
 DEFENDER_SAVE_PATH = 'ppo_defender.zip'
 
@@ -21,7 +22,8 @@ def train(evaluate_after=False):
             policy='MultiInputPolicy'
         ),
         attacker_invalid_action_reward_modifier=ATTACKER_INVALID_ACTION_REWARD,
-        defender_invalid_action_reward_modifier=DEFENDER_INVALID_ACTION_REWARD
+        defender_invalid_action_reward_modifier=DEFENDER_INVALID_ACTION_REWARD,
+        defender_reset_on_constraint_broken=DEFENDER_RESET_ON_CONSTRAINT_BROKEN,
     )
 
     universe.learn(

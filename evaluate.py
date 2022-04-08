@@ -54,7 +54,6 @@ def main():
         'deepq': QCompatibilityAgentBuilder('deepq.pkl'),
         'ppo': LoadFileBaselineAgentBuilder(PPO, 'ppo.zip'),
         'ppo_marl': LoadFileBaselineAgentBuilder(PPO, 'ppo_marl_attacker.zip'),
-        'ppo_marl_no_reset': LoadFileBaselineAgentBuilder(PPO, 'ppo_marl_no_reset.zip'),
         'a2c': LoadFileBaselineAgentBuilder(A2C, 'a2c.zip'),
         'a2c_marl': LoadFileBaselineAgentBuilder(A2C, 'a2c_marl_attacker.zip'),
     }
@@ -64,7 +63,6 @@ def main():
         'random': RandomAgentBuilder(),
         'ppo': LoadFileBaselineAgentBuilder(PPO, 'ppo_defender.zip'),
         'ppo_marl': LoadFileBaselineAgentBuilder(PPO, 'ppo_marl_defender.zip'),
-        'ppo_marl_no_reset': LoadFileBaselineAgentBuilder(PPO, 'ppo_marl_defender_no_reset.zip'),
         'a2c': LoadFileBaselineAgentBuilder(A2C, 'a2c_defender.zip'),
         'a2c_marl': LoadFileBaselineAgentBuilder(A2C, 'a2c_marl_defender.zip'),
     }
@@ -83,8 +81,8 @@ def main():
                 defender_invalid_action_reward_modifier=0,
             )
 
-            results[attacker_name][defender_name] = universe.evaluate(5)
-    
+            results[attacker_name][defender_name] = universe.evaluate(20)
+
     write_csv(results)
 
 if __name__ == "__main__":

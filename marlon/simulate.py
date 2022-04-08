@@ -41,8 +41,7 @@ def create_builder(option, file):
         builder = RandomAgentBuilder()
     elif option == 'Load':
         if 'pkl' in file:
-            learner = torch.load(file)
-            builder = QCompatibilityAgentBuilder(learner=learner)
+            builder = QCompatibilityAgentBuilder(file_path=file)
         else:
             if 'ppo' in file:
                 alg_type = PPO
