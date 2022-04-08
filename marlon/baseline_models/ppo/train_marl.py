@@ -9,6 +9,7 @@ LEARN_EPISODES = 10000 # Set this to a large value to stop at LEARN_TIMESTEPS in
 ATTACKER_INVALID_ACTION_REWARD_MODIFIER = 0
 ATTACKER_INVALID_ACTION_REWARD_MULTIPLIER = 0
 DEFENDER_INVALID_ACTION_REWARD = -1
+DEFENDER_RESET_ON_CONSTRAINT_BROKEN = False
 EVALUATE_EPISODES = 5
 ATTACKER_SAVE_PATH = 'ppo_marl_attacker.zip'
 DEFENDER_SAVE_PATH = 'ppo_marl_defender.zip'
@@ -26,7 +27,8 @@ def train(evaluate_after=False):
         ),
         attacker_invalid_action_reward_modifier=ATTACKER_INVALID_ACTION_REWARD_MODIFIER,
         attacker_invalid_action_reward_multiplier=ATTACKER_INVALID_ACTION_REWARD_MULTIPLIER,
-        defender_invalid_action_reward_modifier=DEFENDER_INVALID_ACTION_REWARD
+        defender_invalid_action_reward_modifier=DEFENDER_INVALID_ACTION_REWARD,
+        defender_reset_on_constraint_broken=DEFENDER_RESET_ON_CONSTRAINT_BROKEN,
     )
 
     universe.learn(

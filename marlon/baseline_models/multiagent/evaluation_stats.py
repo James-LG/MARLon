@@ -24,35 +24,31 @@ class EvalutionStats:
         self.mean_length = np.mean(self.episode_steps)
         self.std_length = np.std(self.episode_steps)
 
-        self.attacker_rewards = np.array(attacker_rewards)
-        self.attacker_valid_actions = np.array(attacker_valid_actions)
-        self.attacker_invalid_actions = np.array(attacker_invalid_actions)
+        attacker_rewards = np.array(attacker_rewards)
+        attacker_valid_actions = np.array(attacker_valid_actions)
+        attacker_invalid_actions = np.array(attacker_invalid_actions)
 
-        self.mean_attacker_reward = np.mean(self.attacker_rewards)
-        self.std_attacker_reward = np.std(self.attacker_rewards)
+        self.mean_attacker_reward = np.mean(attacker_rewards)
+        self.std_attacker_reward = np.std(attacker_rewards)
 
-        self.mean_attacker_valid = np.mean(self.attacker_valid_actions)
-        self.std_attacker_valid = np.std(self.attacker_valid_actions)
-        self.mean_attacker_invalid = np.mean(self.attacker_invalid_actions)
-        self.std_attacker_invalid = np.std(self.attacker_invalid_actions)
+        self.mean_attacker_valid = np.mean(attacker_valid_actions)
+        self.std_attacker_valid = np.std(attacker_valid_actions)
+        self.mean_attacker_invalid = np.mean(attacker_invalid_actions)
+        self.std_attacker_invalid = np.std(attacker_invalid_actions)
 
         if defender_rewards is not None and len(defender_rewards) > 0:
-            self.defender_rewards = np.array(defender_rewards)
-            self.defender_valid_actions = np.array(defender_valid_actions)
-            self.defender_invalid_actions = np.array(defender_invalid_actions)
+            defender_rewards = np.array(defender_rewards)
+            defender_valid_actions = np.array(defender_valid_actions)
+            defender_invalid_actions = np.array(defender_invalid_actions)
 
-            self.mean_defender_reward = np.mean(self.defender_rewards)
-            self.std_defender_reward = np.std(self.defender_rewards)
+            self.mean_defender_reward = np.mean(defender_rewards)
+            self.std_defender_reward = np.std(defender_rewards)
 
-            self.mean_defender_valid = np.mean(self.defender_valid_actions)
-            self.std_defender_valid = np.std(self.defender_valid_actions)
-            self.mean_defender_invalid = np.mean(self.defender_invalid_actions)
-            self.std_defender_invalid = np.std(self.defender_invalid_actions)
+            self.mean_defender_valid = np.mean(defender_valid_actions)
+            self.std_defender_valid = np.std(defender_valid_actions)
+            self.mean_defender_invalid = np.mean(defender_invalid_actions)
+            self.std_defender_invalid = np.std(defender_invalid_actions)
         else:
-            self.defender_rewards = None
-            self.defender_valid_actions = None
-            self.defender_invalid_actions = None
-
             self.mean_defender_reward = None
             self.std_defender_reward = None
 
@@ -82,7 +78,7 @@ class EvalutionStats:
         logger.info('|      std_dev: %.2f', self.std_attacker_invalid)
         logger.info('-------------------------')
 
-        if self.defender_rewards is not None:
+        if self.mean_defender_reward is not None:
             logger.info('| Defender:             |')
             logger.info('|   mean:    %.2f', self.mean_defender_reward)
             logger.info('|   std_dev: %.2f', self.std_defender_reward)
