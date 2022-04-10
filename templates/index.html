@@ -183,8 +183,9 @@
         //  3(Attacker Score)
         //  4(Defender Score)
         Plotly.newPlot('chart',graphs[index][graphSelect],{});
+        max_sim = graphs[num_graphs-1][2]
         spnProgress.textContent = (graphs[index][2]) + '/' + (max_sim);
-
+        
         if (defenderView){
             return graphs[index][4];
         }
@@ -206,10 +207,8 @@
         }
     }
 
-    var max_sim = {{max_sim | safe}}
     var num_graphs = {{num_graphs | safe}}
     var graphs = {{graphs | safe}}
-
     var index = 0;
     var graphSelect = 0;
 
@@ -244,11 +243,10 @@
         await updateGraph();
     }
 
-    if(max_sim == 0 && num_graphs == 0){
+    if(num_graphs == 0){
         btnNext.disabled = true;
         btnPrevious.disabled = true;
         btnView.disabled = true;
-           
     }
     else{
         updateGraph();
