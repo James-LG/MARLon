@@ -86,7 +86,6 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
         # Index 5, 6, 7 relate to action 2 (allow traffic), 5th = node to allow on, 6th = Port to allow, 7th = incoming or outgoing
         # Index 8 and 9 are for action 3 (stop service), 8th = node to stop service on, 9th = port to stop service
         # Index 10 and 11 are for action 4 (start service), 10th = node to start service on, 11th = port to start service on.
-        # TODO Clean all this up
         total_actions = 5
         reimage_node_number = len(cyber_env.environment.network.nodes)
         block_traffic_node = len(cyber_env.environment.network.nodes)
@@ -190,9 +189,7 @@ class DefenderEnvWrapper(gym.Env, IEnvironmentObserver):
             return self.firewall_rule_list[port_from_action] in firewall_list
 
         def service_exists(node_info: model.NodeInfo, service_from_action: int):
-            """Checks if a service exists on a node"""
-            # TODO IS THIS GOOD? This is just checking if its out of bounds...
-            # The names could be in a different order, so action 1 could be one service on one node and a differnet on another...
+            """Checks if a service exists on a node (Only checks if the service is out of bounds for the node)"""
             return service_from_action < len(node_info.services)
         action_number = action[0]
         if action_number == 0:
